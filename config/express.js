@@ -26,9 +26,6 @@ app.use(bodyParser.json());
 // parsing application/xwww-form-urlencoded
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// parse cookies
-app.use(cookieParser(config.cookieSecret));
-
 // compress response bodies
 app.use(compress());
 
@@ -38,8 +35,11 @@ app.use(compress());
 // secure apps by setting various HTTP headers
 app.use(helmet());
 
+// parse cookies
+app.use(cookieParser(config.cookieSecret));
+
 // enable CORS - Cross Origin Resource Sharing
-app.use(cors({ credentials: true }));
+app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
 
 // enable detailed API logging in dev env
 if (isDev) {
