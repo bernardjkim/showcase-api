@@ -39,7 +39,7 @@ app.use(helmet());
 app.use(cookieParser(config.cookieSecret));
 
 // enable CORS - Cross Origin Resource Sharing
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
+app.use(cors({ credentials: true }));
 
 // enable detailed API logging in dev env
 if (isDev) {
