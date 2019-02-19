@@ -1,11 +1,30 @@
 const express = require('express');
 const validate = require('express-validation');
 const multer = require('multer');
+const httpStatus = require('http-status');
+const APIError = require('../error/APIError');
 const paramValidation = require('../../config/param-validation');
 const article = require('./article.controller');
 const auth = require('../auth/auth.controller');
 
 const router = express.Router(); // eslint-disable-line new-cap
+
+/**
+ * Return multer single file upload handler with added error handling
+ */
+const upload = (req, res, next) =>
+  multer().single('file')(req, res, function(err) {
+    if (err instanceof multer.MulterError) {
+      const error = new APIError(
+        `Missing required field: 'field'`,
+        httpStatus.BAD_REQUEST,
+      );
+      return next(error);
+    } else if (err) {
+      return next(err);
+    }
+    next();
+  });
 
 router
   .route('/')
@@ -16,7 +35,7 @@ router
   .post(
     auth.parse,
     auth.authenticate,
-    multer().single('file'),
+    upload,
     article.parse,
     validate(paramValidation.createArticle),
     article.create,

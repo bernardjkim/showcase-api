@@ -77,11 +77,14 @@ async function create(req, res, next) {
 
   const key = new Promise(resolve => {
     if (!file) {
-      const error = new APIError('Invalid image file!', httpStatus.BAD_REQUEST);
-      next(error);
+      // const error = new APIError('Invalid image file!', httpStatus.BAD_REQUEST);
+      // next(error);
+
+      // NOTE: No screenshot OK for now
+      resolve('');
     } else {
       const timestamp = Date.now().toString();
-      uploadFile(file.buffer, `screenshots/${timestamp}-lg`, file.mimetype)
+      uploadFile(file.buffer, `screenshots/${timestamp}-lg.png`, file.mimetype)
         .then(data => {
           resolve(data.Location);
         })

@@ -40,7 +40,8 @@ const transports = [
     format: winston.format.combine(
       errorFilter(),
       winston.format.timestamp(),
-      customFormat,
+      winston.format.prettyPrint(),
+      // customFormat,
     ),
   }),
   new DailyRotateFile({
@@ -59,17 +60,16 @@ const transports = [
       customFormat,
     ),
   }),
-  new winston.transports.Console({
-    level: 'warn', // log warn level to console only
-    handleExceptions: true,
-    json: false,
-    colorize: true,
-    format: winston.format.combine(
-      winston.format.colorize(),
-      // winston.format.simple(),
-      winston.format.prettyPrint(),
-    ),
-  }),
+  // new winston.transports.Console({
+  //   level: 'warn', // log warn level to console only
+  //   handleExceptions: true,
+  //   json: false,
+  //   colorize: true,
+  //   format: winston.format.combine(
+  //     winston.format.colorize(),
+  //     winston.format.prettyPrint(),
+  //   ),
+  // }),
 ];
 
 const logger = winston.createLogger({

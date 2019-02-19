@@ -42,7 +42,7 @@ function uploadFile(buffer, name, type) {
     Body: buffer,
     Bucket: config.aws.bucket,
     ContentType: type.mime,
-    Key: `${Date.now()}-${name}`,
+    Key: name,
   };
   return s3.upload(params).promise();
 }
