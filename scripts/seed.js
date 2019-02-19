@@ -16,37 +16,46 @@ mongoose.connection.on('error', () => {
   throw new Error(`unable to connect to database: ${mongoUri}`);
 });
 
-async function insert(article) {
-  // read local image
-  fs.readFile(`images/${article.image}`, function(err, data) {
-    if (err) throw err;
+function insert(article) {
+  return new Promise(resolve => {
+    // read local image
+    fs.readFile(`images/${article.image}`, function(err, data) {
+      if (err) throw err;
 
-    // create buffer from data
-    var base64data = new Buffer(data, 'binary');
+      // create buffer from data
+      var base64data = new Buffer.from(data, 'binary');
 
-    // upload file to s3
-    uploadFile(base64data, `testing/${article.image}`, 'image/png')
-      .then(data => {
-        // replace article image local path to s3 key
-        article.image = data.Location;
+      // upload file to s3
+      uploadFile(base64data, `testing/${article.image}`, 'image/png')
+        .then(data => {
+          // replace article image local path to s3 key
+          article.image = data.Location;
 
-        // save article into database
-        const mongoArticle = new Article(article);
-        mongoArticle
-          .save()
-          .then(savedArticle => console.log('saved article: ', savedArticle)) // eslint-disable-line no-console
-          .catch(e => {
-            throw e;
-          });
-      })
-      .catch(e => {
-        throw e;
-      });
+          // save article into database
+          const mongoArticle = new Article(article);
+          mongoArticle
+            .save()
+            .then(savedArticle => {
+              console.log('saved: ', savedArticle); // eslint-disable-line no-console
+              resolve();
+            })
+            .catch(e => {
+              throw e;
+            });
+        })
+        .catch(e => {
+          throw e;
+        });
+    });
   });
 }
 
 // insert articles into database
-for (let article of articles) {
-  insert(article);
-}
-process.exit();
+Promise.all(articles.map(article => insert(article)))
+  .then(() => {
+    process.exit();
+  })
+  .catch(e => {
+    console.error(e); // eslint-disable-line no-console
+    process.exit(1);
+  });
