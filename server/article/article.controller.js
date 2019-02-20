@@ -4,6 +4,7 @@ const APIError = require('../error/APIError');
 const Article = require('./article.model');
 const Like = require('../like/like.model');
 const { queryTerm, queryAll } = require('../../util/elasticsearch');
+const redis = require('../../util/redis');
 
 const { uploadFile } = require('../../util/s3');
 
@@ -60,7 +61,34 @@ async function get(req, res, next) {
   const obj = req.article.toObject();
   obj.likes = await likes;
   obj.likedByUser = !!(await likedByUser);
+
   return res.json({ article: obj });
+}
+
+async function getRedis(req, res, next) {
+  const data = await redis.getAsync(req.article);
+
+  if (!data) {
+    // Check if article has been liked by current user
+    const likedByUser = Like.findOne({
+      article: req.article,
+      user: req.user,
+    }).catch(e => next(e));
+
+    // Get total number of likes for the article
+    const likes = Like.getByArticle(req.article).catch(e => next(e));
+
+    // Append data and send response
+    const obj = req.article.toObject();
+    obj.likes = await likes;
+    obj.likedByUser = !!(await likedByUser);
+
+    await redis.setAsync(req.article, JSON.stringify(obj));
+    return res.json({ article: obj });
+  } else {
+    const result = JSON.parse(data);
+    return res.json({ article: result });
+  }
 }
 
 /**
@@ -142,4 +170,4 @@ async function all(req, res, next) {
     .catch(e => next(e));
 }
 
-module.exports = { load, get, create, parse, search, all };
+module.exports = { load, get, create, parse, search, all, getRedis };

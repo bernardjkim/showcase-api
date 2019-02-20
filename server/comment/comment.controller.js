@@ -1,6 +1,7 @@
 const httpStatus = require('http-status');
 const Comment = require('./comment.model');
 const Article = require('../article/article.model');
+const redis = require('../../util/redis');
 
 /**
  * Load comments and append to req
@@ -13,6 +14,25 @@ function load(req, res, next, id) {
       return next();
     })
     .catch(e => next(e));
+}
+
+async function loadRedis(req, res, next, id) {
+  const data = await redis.getAsync(id);
+  if (!data) {
+    Comment.getByArticle(id)
+      .then(async comments => {
+        req.articleId = id;
+        req.comments = comments;
+        await redis.setAsync(id, JSON.stringify({ id, comments }));
+        return next();
+      })
+      .catch(e => next(e));
+  } else {
+    const result = JSON.parse(data);
+    req.articleId = result.id;
+    req.comments = result.comments;
+    next();
+  }
 }
 
 /**
@@ -47,4 +67,4 @@ function create(req, res, next) {
     .catch(e => next(e));
 }
 
-module.exports = { get, create, load };
+module.exports = { get, create, load, loadRedis };
