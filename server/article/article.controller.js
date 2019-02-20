@@ -112,9 +112,10 @@ async function create(req, res, next) {
 /**
  * Search articles with the given query
  *
- * @param   {string}  req.query.q  - Query string
+ * @param   {string}  req.query.q       - Query string
+ * @param   {number}  req.query.offset  - Query offset
  *
- * @returns {object}               -  ES search result
+ * @returns {object}                    -  ES search result
  */
 async function search(req, res, next) {
   const { q, offset } = req.query;
@@ -128,7 +129,9 @@ async function search(req, res, next) {
 /**
  * Get all articles
  *
- * @returns {object}  -  ES search result
+ * @param   {number}  req.query.offset  - Articles offset
+ *
+ * @returns {object}                    - ES search result
  */
 async function all(req, res, next) {
   const { offset } = req.query;
