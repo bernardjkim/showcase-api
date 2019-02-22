@@ -59,14 +59,7 @@ router
   /** GET /api/article/:id - Get article */
   .get(auth.parse, article.get);
 
-router
-  .route('/redis/:idRedis')
-
-  /** GET /api/article/:id - Get article */
-  .get(auth.parse, article.getRedis);
-
 /** Load article when API with id route parameter is hit */
 router.param('id', article.load);
-router.param('idRedis', article.loadRedis);
 
 module.exports = router;

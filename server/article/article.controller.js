@@ -12,16 +12,7 @@ const { uploadFile } = require('../../util/s3');
  * Load article and append to req
  *
  */
-function load(req, res, next, id) {
-  Article.get(id)
-    .then(article => {
-      req.article = article;
-      return next();
-    })
-    .catch(e => next(e));
-}
-
-async function loadRedis(req, res, next, id) {
+async function load(req, res, next, id) {
   const key = `article:${id}`;
   const data = await redis.getAsync(key);
 
@@ -35,7 +26,7 @@ async function loadRedis(req, res, next, id) {
   // cache miss
 
   // acquire lock
-  const lock = await redis.redlock.lock(`locks:${key}`, redis.ttl).catch(e => {
+  const lock = await redis.redlock.lock(`locks:${key}`, redis.ttl).catch(() => {
     // retry cache lookup if failed to acquire lock
     setTimeout(loadRedis(req, res, next, id), 200);
     return;
@@ -54,7 +45,7 @@ async function loadRedis(req, res, next, id) {
   lock.unlock().catch(e => {
     // we weren't able to reach redis; your lock will eventually
     // expire, but you probably want to log this error
-    console.error(e);
+    console.error('unable to unlock: ', e); //eslint-disable-line no-console
   });
 
   // append article and continue to next
@@ -89,24 +80,6 @@ function parse(req, res, next) {
  * @returns {Article}
  */
 async function get(req, res, next) {
-  // Check if article has been liked by current user
-  const likedByUser = Like.findOne({
-    article: req.article,
-    user: req.user,
-  }).catch(e => next(e));
-
-  // Get total number of likes for the article
-  const likes = Like.getByArticle(req.article).catch(e => next(e));
-
-  // Append data and send response
-  const obj = req.article.toObject();
-  obj.likes = await likes;
-  obj.likedByUser = !!(await likedByUser);
-
-  return res.json({ article: obj });
-}
-
-async function getRedis(req, res, next) {
   const articleId = req.article['_id'];
   const userId = req.user ? req.user['_id'] : '';
   const keyLBU = `likedByUser:${articleId}.${userId}`;
@@ -125,7 +98,7 @@ async function getRedis(req, res, next) {
     // acquire lock
     const lock = await redis.redlock
       .lock(`locks:${keyLBU}`, redis.ttl)
-      .catch(e => {
+      .catch(() => {
         // retry cache lookup if failed to acquire lock
         setTimeout(getRedis(req, res, next), 200);
         return;
@@ -263,4 +236,4 @@ async function all(req, res, next) {
     .catch(e => next(e));
 }
 
-module.exports = { load, get, create, parse, search, all, getRedis, loadRedis };
+module.exports = { load, get, create, parse, search, all };
