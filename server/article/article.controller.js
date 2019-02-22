@@ -21,6 +21,47 @@ function load(req, res, next, id) {
     .catch(e => next(e));
 }
 
+async function loadRedis(req, res, next, id) {
+  const key = `article:${id}`;
+  const data = await redis.getAsync(key);
+
+  // cache hit
+  if (data) {
+    const result = JSON.parse(data);
+    req.article = result;
+    return next();
+  }
+
+  // cache miss
+
+  // acquire lock
+  const lock = await redis.redlock.lock(`locks:${key}`, redis.ttl).catch(e => {
+    // retry cache lookup if failed to acquire lock
+    setTimeout(loadRedis(req, res, next, id), 200);
+    return;
+  });
+
+  // not sure why, but lock will return undefined sometimes???
+  if (!lock) return;
+
+  // fetch resource
+  const article = await Article.get(id).catch(e => next(e));
+
+  // update cache with resource
+  await redis.setAsync(key, JSON.stringify(article));
+
+  // release lock
+  lock.unlock().catch(e => {
+    // we weren't able to reach redis; your lock will eventually
+    // expire, but you probably want to log this error
+    console.error(e);
+  });
+
+  // append article and continue to next
+  req.article = article;
+  return next();
+}
+
 /**
  * Parse form and append fields to req
  *
@@ -66,29 +107,81 @@ async function get(req, res, next) {
 }
 
 async function getRedis(req, res, next) {
-  const data = await redis.getAsync(req.article);
+  const articleId = req.article['_id'];
+  const userId = req.user ? req.user['_id'] : '';
+  const keyLBU = `likedByUser:${articleId}.${userId}`;
+  const keyLikes = `likes:${articleId}`;
+  const dataLBU = await redis.getAsync(keyLBU);
+  const dataLikes = await redis.getAsync(keyLikes);
 
-  if (!data) {
+  const obj = req.article;
+
+  // cache hit
+  if (dataLBU) {
+    obj.likedByUser = JSON.parse(dataLBU);
+
+    // cache miss
+  } else {
+    // acquire lock
+    const lock = await redis.redlock
+      .lock(`locks:${keyLBU}`, redis.ttl)
+      .catch(e => {
+        // retry cache lookup if failed to acquire lock
+        setTimeout(getRedis(req, res, next), 200);
+        return;
+      });
+
+    if (!lock) return;
+
     // Check if article has been liked by current user
-    const likedByUser = Like.findOne({
+    const likedByUser = await Like.findOne({
       article: req.article,
       user: req.user,
     }).catch(e => next(e));
 
-    // Get total number of likes for the article
-    const likes = Like.getByArticle(req.article).catch(e => next(e));
+    // update cache
+    await redis.setAsync(keyLBU, JSON.stringify(!!likedByUser));
 
-    // Append data and send response
-    const obj = req.article.toObject();
-    obj.likes = await likes;
-    obj.likedByUser = !!(await likedByUser);
+    // append field
+    obj.likedByUser = !!likedByUser;
 
-    await redis.setAsync(req.article, JSON.stringify(obj));
-    return res.json({ article: obj });
-  } else {
-    const result = JSON.parse(data);
-    return res.json({ article: result });
+    // release lock
+    lock.unlock().catch(e => {
+      // we weren't able to reach redis; your lock will eventually
+      // expire, but you probably want to log this error
+      console.error('unable to unlock: ', e); //eslint-disable-line no-console
+    });
   }
+
+  if (dataLikes) {
+    obj.likes = JSON.parse(dataLikes);
+  } else {
+    // acquire lock
+    const lock = await redis.redlock
+      .lock(`locks:${keyLikes}`, redis.ttl)
+      .catch(() => {
+        // retry cache lookup if failed to acquire lock
+        setTimeout(getRedis(req, res, next), 200);
+        return;
+      });
+    if (!lock) return;
+
+    // Get total number of likes for the article
+    const likes = await Like.getByArticle(articleId).catch(e => next(e));
+    // update cache
+    await redis.setAsync(keyLikes, JSON.stringify(likes));
+
+    // append field
+    obj.likes = likes;
+    // release lock
+    lock.unlock().catch(e => {
+      // we weren't able to reach redis; your lock will eventually
+      // expire, but you probably want to log this error
+      console.error('unable to unlock: ', e); //eslint-disable-line no-console
+    });
+  }
+
+  return res.json({ article: obj });
 }
 
 /**
@@ -170,4 +263,4 @@ async function all(req, res, next) {
     .catch(e => next(e));
 }
 
-module.exports = { load, get, create, parse, search, all, getRedis };
+module.exports = { load, get, create, parse, search, all, getRedis, loadRedis };
