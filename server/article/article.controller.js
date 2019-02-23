@@ -8,48 +8,125 @@ const redis = require('../../util/redis');
 
 const { uploadFile } = require('../../util/s3');
 
+/** ---------------------------------UTIL------------------------------------ */
+
+/**
+ * Get the article with the provided id
+ *
+ * @param {string}    id    - Article id
+ * @param {function}  func  - Function used to fetch the desired resource
+ */
+function getResource(key, func) {
+  return new Promise(async (resolve, reject) => {
+    const data = await redis.getAsync(key);
+
+    // cache hit
+    if (data) {
+      resolve(JSON.parse(data));
+      return;
+    }
+
+    // acquire lock
+    const lock = await redis.redlock
+      .lock(`locks:${key}`, redis.ttl)
+      .catch(() => {
+        // unable to acquire lock
+        setTimeout(resolve(null), 200);
+        return;
+      });
+    // not sure why, but lock will return undefined sometimes???
+    if (!lock) throw new Error('Redis lock is undefined!!!');
+
+    // fetch resource
+    const result = await func().catch(e => {
+      reject(e);
+      return;
+    });
+
+    // update cache with resource
+    await redis.setAsync(key, JSON.stringify(result));
+
+    // release lock
+    lock.unlock().catch(e => {
+      // we weren't able to reach redis; your lock will eventually
+      // expire, but you probably want to log this error
+      console.error('unable to unlock: ', e); //eslint-disable-line no-console
+    });
+    resolve(result);
+  });
+}
+
+/**
+ * Create/update the cached value for the given key
+ *
+ * @param {string} key  - Resource key
+ * @param {string} func - Function to create resource
+ */
+function createResource(key, func) {
+  return new Promise(async (resolve, reject) => {
+    // acquire lock
+    const lock = await redis.redlock
+      .lock(`locks:${key}`, redis.ttl)
+      .catch(() => {
+        // unable to acquire lock
+        setTimeout(resolve(null), 200);
+        return;
+      });
+    // not sure why, but lock will return undefined sometimes???
+    if (!lock) throw new Error('Redis lock is undefined!!!');
+
+    // delete old value
+    await redis.delAsync(key).catch(e => {
+      reject(e);
+      return;
+    });
+
+    // create resource
+    const result = await func().catch(e => {
+      reject(e);
+      return;
+    });
+
+    // update cache with resource
+    await redis.setAsync(key, JSON.stringify(result)).catch(e => {
+      reject(e);
+      return;
+    });
+
+    // release lock
+    lock.unlock().catch(e => {
+      // we weren't able to reach redis; your lock will eventually
+      // expire, but you probably want to log this error
+      console.error('unable to unlock: ', e); //eslint-disable-line no-console
+    });
+    resolve(result);
+  });
+}
+
+/** ------------------------------------------------------------------------- */
 /**
  * Load article and append to req
- *
  */
 async function load(req, res, next, id) {
   const key = `article:${id}`;
-  const data = await redis.getAsync(key);
 
-  // cache hit
-  if (data) {
-    const result = JSON.parse(data);
-    req.article = result;
-    return next();
+  let result = null;
+  while (result === null) {
+    result = await getResource(
+      key,
+      () =>
+        new Promise((resolve, reject) => {
+          Article.get(id)
+            .then(article => {
+              resolve(article.toObject());
+            })
+            .catch(e => reject(e));
+        }),
+    ).catch(e => next(e));
   }
 
-  // cache miss
-
-  // acquire lock
-  const lock = await redis.redlock.lock(`locks:${key}`, redis.ttl).catch(() => {
-    // retry cache lookup if failed to acquire lock
-    setTimeout(loadRedis(req, res, next, id), 200);
-    return;
-  });
-
-  // not sure why, but lock will return undefined sometimes???
-  if (!lock) return;
-
-  // fetch resource
-  const article = await Article.get(id).catch(e => next(e));
-
-  // update cache with resource
-  await redis.setAsync(key, JSON.stringify(article));
-
-  // release lock
-  lock.unlock().catch(e => {
-    // we weren't able to reach redis; your lock will eventually
-    // expire, but you probably want to log this error
-    console.error('unable to unlock: ', e); //eslint-disable-line no-console
-  });
-
   // append article and continue to next
-  req.article = article;
+  req.article = result;
   return next();
 }
 
@@ -84,75 +161,43 @@ async function get(req, res, next) {
   const userId = req.user ? req.user['_id'] : '';
   const keyLBU = `likedByUser:${articleId}.${userId}`;
   const keyLikes = `likes:${articleId}`;
-  const dataLBU = await redis.getAsync(keyLBU);
-  const dataLikes = await redis.getAsync(keyLikes);
 
-  const obj = req.article;
+  // is article liked by user?
+  const likedByUser = new Promise(async resolve => {
+    let result = null;
+    while (result === null) {
+      result = await getResource(
+        keyLBU,
+        () =>
+          new Promise((resolve, reject) => {
+            Like.findOne({
+              article: req.article,
+              user: req.user,
+            })
+              .then(like => resolve(!!like))
+              .catch(e => reject(e));
+          }),
+      );
+    }
+    resolve(result);
+  });
 
-  // cache hit
-  if (dataLBU) {
-    obj.likedByUser = JSON.parse(dataLBU);
+  // number of article likes
+  const likes = new Promise(async resolve => {
+    let result = null;
+    while (result === null) {
+      result = await getResource(keyLikes, () =>
+        Like.getByArticle(articleId),
+      ).catch(e => next(e));
+    }
+    resolve(result);
+  });
 
-    // cache miss
-  } else {
-    // acquire lock
-    const lock = await redis.redlock
-      .lock(`locks:${keyLBU}`, redis.ttl)
-      .catch(() => {
-        // retry cache lookup if failed to acquire lock
-        setTimeout(getRedis(req, res, next), 200);
-        return;
-      });
-
-    if (!lock) return;
-
-    // Check if article has been liked by current user
-    const likedByUser = await Like.findOne({
-      article: req.article,
-      user: req.user,
-    }).catch(e => next(e));
-
-    // update cache
-    await redis.setAsync(keyLBU, JSON.stringify(!!likedByUser));
-
-    // append field
-    obj.likedByUser = !!likedByUser;
-
-    // release lock
-    lock.unlock().catch(e => {
-      // we weren't able to reach redis; your lock will eventually
-      // expire, but you probably want to log this error
-      console.error('unable to unlock: ', e); //eslint-disable-line no-console
-    });
-  }
-
-  if (dataLikes) {
-    obj.likes = JSON.parse(dataLikes);
-  } else {
-    // acquire lock
-    const lock = await redis.redlock
-      .lock(`locks:${keyLikes}`, redis.ttl)
-      .catch(() => {
-        // retry cache lookup if failed to acquire lock
-        setTimeout(getRedis(req, res, next), 200);
-        return;
-      });
-    if (!lock) return;
-
-    // Get total number of likes for the article
-    const likes = await Like.getByArticle(articleId).catch(e => next(e));
-    // update cache
-    await redis.setAsync(keyLikes, JSON.stringify(likes));
-
-    // append field
-    obj.likes = likes;
-    // release lock
-    lock.unlock().catch(e => {
-      // we weren't able to reach redis; your lock will eventually
-      // expire, but you probably want to log this error
-      console.error('unable to unlock: ', e); //eslint-disable-line no-console
-    });
-  }
+  const obj = {
+    ...req.article,
+    likedByUser: await likedByUser,
+    likes: await likes,
+  };
 
   return res.json({ article: obj });
 }
@@ -169,7 +214,7 @@ async function get(req, res, next) {
 async function create(req, res, next) {
   const { file } = req;
 
-  const key = new Promise(resolve => {
+  const imageLocation = new Promise(resolve => {
     if (!file) {
       // const error = new APIError('Invalid image file!', httpStatus.BAD_REQUEST);
       // next(error);
@@ -191,16 +236,26 @@ async function create(req, res, next) {
     uri: req.body.uri,
     github: req.body.github,
     description: req.body.description,
-    image: await key,
+    image: await imageLocation,
     tags: req.body.tags,
   });
+  const key = `article:${article['_id']}`;
 
-  article
-    .save()
-    .then(savedArticle =>
-      res.status(httpStatus.CREATED).json({ article: savedArticle }),
-    )
-    .catch(e => next(e));
+  let result = null;
+  while (result === null) {
+    result = await createResource(
+      key,
+      () =>
+        new Promise((resolve, reject) => {
+          article
+            .save()
+            .then(savedArticle => resolve(savedArticle))
+            .catch(e => reject(e));
+        }),
+    );
+  }
+
+  res.status(httpStatus.CREATED).json({ article: result });
 }
 
 /**

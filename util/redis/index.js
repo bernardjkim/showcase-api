@@ -10,7 +10,7 @@ const redlock = new Redlock([client], {
 
   // the max number of times Redlock will attempt
   // to lock a resource before erroring
-  retryCount: 10,
+  retryCount: 0,
 
   // the time in ms between attempts
   retryDelay: 200, // time in ms
@@ -30,6 +30,7 @@ module.exports = {
   ...client,
   redlock,
   ttl,
+  delAsync: promisify(client.del).bind(client),
   getAsync: promisify(client.get).bind(client),
   setAsync: promisify(client.set).bind(client),
   keysAsync: promisify(client.keys).bind(client),
