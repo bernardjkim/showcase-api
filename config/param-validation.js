@@ -38,14 +38,28 @@ module.exports = {
 
   // POST /api/article
   createArticle: {
-    body: {
+    form: {
       title: Joi.string().required(),
       uri: Joi.string()
-        .uri()
         .trim()
         .required(),
+      github: Joi.string(),
       description: Joi.string().required(),
+      tags: Joi.array(),
     },
-    file: Joi.any().required(),
+    file: {
+      fieldname: Joi.string()
+        .valid('file')
+        .required(),
+      originalname: Joi.string().required(),
+      encoding: Joi.string().required(),
+      // TODO: only allow certain set of file types?
+      mimetype: Joi.string()
+        .valid('image/png')
+        .required()
+        .error(new Error("File must be of type 'image/png'")),
+      buffer: Joi.any().required(),
+      size: Joi.number().required(), // TODO: limit file size?
+    },
   },
 };

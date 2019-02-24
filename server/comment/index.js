@@ -11,17 +11,11 @@ router
   .post(auth.parse, auth.authenticate, comment.create);
 
 router
-  .route('/:articleId')
-
-  /** GET /api/comment/:articleId - Get comments for specified article */
-  .get(comment.get);
-router
-  .route('/redis/:articleIdRedis')
+  .route('/:article')
 
   /** GET /api/comment/:articleId - Get comments for specified article */
   .get(comment.get);
 
-router.param('articleId', comment.load);
-router.param('articleIdRedis', comment.loadRedis);
+router.param('article', comment.load);
 
 module.exports = router;
