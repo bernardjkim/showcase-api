@@ -4,17 +4,15 @@ const User = require('./user.model');
 /**
  * Load user and append to req
  */
-function load(req, res, next, id) {
-  User.get(id)
-    .then(user => {
-      req.user = user;
-      return next();
-    })
-    .catch(e => next(e));
+async function load(req, res, next, id) {
+  const user = await User.get(id).catch(e => next(e));
+  req.user = user;
+  return next();
 }
 /**
  * Get user
- * @returns {User}
+ * @property  {User}  req.user  - User object
+ * @returns   {User}
  */
 function get(req, res) {
   return res.json({ user: req.user });
@@ -22,28 +20,26 @@ function get(req, res) {
 
 /**
  * Create new user
- * @property  {string}  username      - Username
- * @property  {string}  email         - User email
- * @property  {string}  password      - User password
+ * @property  {string}  req.body.username - Username
+ * @property  {string}  req.body.email    - User email
+ * @property  {string}  req.body.password - User password
  *
  */
-function create(req, res, next) {
-  User.create({
+async function create(req, res, next) {
+  const user = await User.create({
     username: req.body.username,
     email: req.body.email,
     password: req.body.password,
-  })
-    .then(savedUser => res.status(httpStatus.CREATED).json({ user: savedUser }))
-    .catch(e => next(e));
-  // const user = new User({
-  //   username: req.body.username,
-  //   email: req.body.email,
-  //   password: req.body.password,
-  // });
-  // user
-  //   .save()
-  //   .then(savedUser => res.status(httpStatus.CREATED).json({ user: savedUser }))
-  //   .catch(e => next(e));
+  }).catch(e => next(e));
+  res.status(httpStatus.CREATED).json({ user });
 }
 
-module.exports = { load, get, create };
+/**
+ * Get list of users
+ */
+async function list(req, res, next) {
+  const users = await User.find().catch(e => next(e));
+  res.json({ users });
+}
+
+module.exports = { load, get, create, list };
