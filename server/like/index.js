@@ -1,6 +1,7 @@
 const express = require('express');
 const like = require('./like.controller');
 const auth = require('../auth/auth.controller');
+const { redisMiddleware } = require('../redis');
 
 const router = express.Router(); // eslint-disable-line new-cap
 
@@ -17,7 +18,7 @@ router
   .route('/:article')
 
   /** GET /api/like/:article - Get likes for specified article */
-  .get(like.get);
+  .get(redisMiddleware, like.get);
 
 router.param('article', like.load);
 

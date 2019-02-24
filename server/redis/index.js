@@ -13,7 +13,7 @@ async function redisMiddleware(req, res, next) {
     // cache miss
     res.jsonResponse = res.json;
     res.json = async body => {
-      await redis.setAsync(key, JSON.stringify(body));
+      await redis.setAsync(key, JSON.stringify(body), 'EX', 30);
       res.jsonResponse(body);
     };
     next();

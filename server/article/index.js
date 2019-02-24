@@ -1,8 +1,6 @@
 const express = require('express');
 const validate = require('express-validation');
 const multer = require('multer');
-// const httpStatus = require('http-status');
-// const APIError = require('../error/APIError');
 const paramValidation = require('../../config/param-validation');
 const article = require('./article.controller');
 const auth = require('../auth/auth.controller');
