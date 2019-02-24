@@ -2,7 +2,6 @@ const httpStatus = require('http-status');
 const APIError = require('../error/APIError');
 const User = require('../user/user.model');
 const { sign, decode } = require('../../util/jwt');
-const redis = require('../../util/redis');
 
 /**
  * Returns jwt token if valid email and password is provided
@@ -61,38 +60,8 @@ async function parse(req, res, next) {
   const decoded = await decode(token).catch(e => next(e));
   // const {iat, exp} = decoded;
 
-  const key = `user:${decoded.user['_id']}`;
-  const data = await redis.getAsync(key);
-
-  // cache hit
-  if (data) {
-    req.user = JSON.parse(data);
-    return next();
-  }
-
-  // cache miss
-
-  // acquire lock
-  const lock = await redis.redlock.lock(`locks:${key}`, redis.ttl).catch(() => {
-    // retry cache lookup if failed to acquire lock
-    setTimeout(parse(req, res, next), 200);
-    return;
-  });
-  // not sure why, but lock will return undefined sometimes???
-  if (!lock) return;
-
   // validate user still exists in database
   const user = await User.findById(decoded.user['_id']).catch(e => next(e));
-
-  // update cache
-  await redis.setAsync(key, JSON.stringify(user));
-
-  // release lock
-  lock.unlock().catch(e => {
-    // we weren't able to reach redis; your lock will eventually
-    // expire, but you probably want to log this error
-    console.error('unable to unlock: ', e); //eslint-disable-line no-console
-  });
 
   if (!user) {
     const error = new APIError('Unauthorized', httpStatus.UNAUTHORIZED);
