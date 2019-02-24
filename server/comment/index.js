@@ -15,7 +15,13 @@ router
 
   /** GET /api/comment/:articleId - Get comments for specified article */
   .get(comment.get);
+router
+  .route('/redis/:articleIdRedis')
+
+  /** GET /api/comment/:articleId - Get comments for specified article */
+  .get(comment.get);
 
 router.param('articleId', comment.load);
+router.param('articleIdRedis', comment.loadRedis);
 
 module.exports = router;

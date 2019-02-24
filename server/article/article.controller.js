@@ -2,22 +2,17 @@ const qs = require('qs');
 const httpStatus = require('http-status');
 const APIError = require('../error/APIError');
 const Article = require('./article.model');
-const Like = require('../like/like.model');
 const { queryTerm, queryAll } = require('../../util/elasticsearch');
 
 const { uploadFile } = require('../../util/s3');
 
 /**
  * Load article and append to req
- *
  */
-function load(req, res, next, id) {
-  Article.get(id)
-    .then(article => {
-      req.article = article;
-      return next();
-    })
-    .catch(e => next(e));
+async function load(req, res, next, id) {
+  const result = await Article.get(id).catch(e => next(e));
+  req.article = result.toObject();
+  next();
 }
 
 /**
@@ -42,25 +37,11 @@ function parse(req, res, next) {
 /**
  * Get article
  * @param   {Article} req.article   - Requested Article
- * @param   {User}    req.User      - Requesting User
  *
  * @returns {Article}
  */
-async function get(req, res, next) {
-  // Check if article has been liked by current user
-  const likedByUser = Like.findOne({
-    article: req.article,
-    user: req.user,
-  }).catch(e => next(e));
-
-  // Get total number of likes for the article
-  const likes = Like.getByArticle(req.article).catch(e => next(e));
-
-  // Append data and send response
-  const obj = req.article.toObject();
-  obj.likes = await likes;
-  obj.likedByUser = !!(await likedByUser);
-  return res.json({ article: obj });
+async function get(req, res) {
+  return res.json({ article: req.article });
 }
 
 /**
@@ -75,7 +56,7 @@ async function get(req, res, next) {
 async function create(req, res, next) {
   const { file } = req;
 
-  const key = new Promise(resolve => {
+  const imageLocation = new Promise(resolve => {
     if (!file) {
       // const error = new APIError('Invalid image file!', httpStatus.BAD_REQUEST);
       // next(error);
@@ -97,16 +78,12 @@ async function create(req, res, next) {
     uri: req.body.uri,
     github: req.body.github,
     description: req.body.description,
-    image: await key,
+    image: await imageLocation,
     tags: req.body.tags,
   });
 
-  article
-    .save()
-    .then(savedArticle =>
-      res.status(httpStatus.CREATED).json({ article: savedArticle }),
-    )
-    .catch(e => next(e));
+  const savedArticle = await article.save().catch(e => next(e));
+  res.status(httpStatus.CREATED).json({ article: savedArticle });
 }
 
 /**

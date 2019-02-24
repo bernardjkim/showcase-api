@@ -6,6 +6,7 @@ const APIError = require('../error/APIError');
 const paramValidation = require('../../config/param-validation');
 const article = require('./article.controller');
 const auth = require('../auth/auth.controller');
+const { redisMiddleware } = require('../redis');
 
 const router = express.Router(); // eslint-disable-line new-cap
 
@@ -29,7 +30,7 @@ const upload = (req, res, next) =>
 router
   .route('/')
   /** GET /api/article - Get list of articles */
-  .get(article.all)
+  .get(redisMiddleware, article.all)
 
   /** POST /api/article - Create new article */
   .post(
@@ -45,21 +46,21 @@ router
   .route('/all')
 
   /** GET /api/article/all - Get list of articles  */
-  .get(article.all);
+  .get(redisMiddleware, article.all);
 
 router
   .route('/search')
 
   /** GET /api/article/search?q={search string} - Get list of articles */
-  .get(article.search);
+  .get(redisMiddleware, article.search);
 
 router
-  .route('/:id')
+  .route('/:article')
 
   /** GET /api/article/:id - Get article */
-  .get(auth.parse, article.get);
+  .get(redisMiddleware, article.get);
 
 /** Load article when API with id route parameter is hit */
-router.param('id', article.load);
+router.param('article', article.load);
 
 module.exports = router;

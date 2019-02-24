@@ -41,7 +41,7 @@ LikeSchema.statics = {
    * Get number of likes by article
    */
   getByArticle(id) {
-    return this.count({ article: id })
+    return this.countDocuments({ article: id })
       .exec()
       .then(count => count);
   },

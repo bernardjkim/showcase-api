@@ -57,26 +57,18 @@ async function parse(req, res, next) {
   const token = req.signedCookies.jwt;
   if (!token) return next();
 
-  const user = new Promise(resolve => {
-    decode(token)
-      .then(decoded => {
-        // const { iat, exp } = decoded;
+  const decoded = await decode(token).catch(e => next(e));
+  // const {iat, exp} = decoded;
 
-        // TODO: skip this step and make sure to invalidate JWT when a user is removed
+  // validate user still exists in database
+  const user = await User.findById(decoded.user['_id']).catch(e => next(e));
 
-        // validate user still exists in database
-        User.findById(decoded.user)
-          .then(result => {
-            if (result) return resolve(result);
-            const error = new APIError('Unauthorized', httpStatus.UNAUTHORIZED);
-            return next(error);
-          })
-          .catch(e => next(e));
-      })
-      .catch(e => next(e));
-  });
+  if (!user) {
+    const error = new APIError('Unauthorized', httpStatus.UNAUTHORIZED);
+    return next(error);
+  }
 
-  req.user = await user;
+  req.user = user;
   return next();
 }
 
