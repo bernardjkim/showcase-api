@@ -16,72 +16,55 @@ async function load(req, res, next, id) {
 }
 
 /**
- * Parse form and append fields to req
+ * Parse the form and append to req.
+ * This step is necessary because the form is received as a stringified object.
  *
- * @property  {object}  form  - Article form
+ * @property  {string}  req.body.form - Stringified form data
  */
 function parse(req, res, next) {
-  const form = qs.parse(req.body.form);
-  if (!form) {
-    const error = new APIError('Missing form!', httpStatus.BAD_REQUEST);
+  if (!req.body.form) {
+    const error = new APIError('Missing form data', httpStatus.BAD_REQUEST);
     next(error);
-  } else {
-    req.body.title = form.title;
-    req.body.uri = form.uri;
-    req.body.github = form.github;
-    req.body.description = form.description;
-    req.body.tags = form.tags;
-    next();
+    return;
   }
+
+  // parse form and append to req object
+  req.form = qs.parse(req.body.form);
+  next();
 }
+
 /**
  * Get article
  * @param   {Article} req.article   - Requested Article
  *
  * @returns {Article}
  */
-async function get(req, res) {
+function get(req, res) {
   return res.json({ article: req.article });
 }
 
 /**
  * Create new article
- * @property  {string}  title       - Website title
- * @property  {string}  uri         - Website uri
- * @property  {string}  github      - GitHub repo
- * @property  {string}  description - Website description
- * @property  {File}    image       - Website screenshot
+ * @property  {object}  req.form  - Website information
+ * @property  {object}  req.file  - Website screenshot
  *
  */
 async function create(req, res, next) {
-  const { file } = req;
+  const { file, form } = req;
 
+  // upload screenshot to S3
   const imageLocation = new Promise(resolve => {
-    if (!file) {
-      // const error = new APIError('Invalid image file!', httpStatus.BAD_REQUEST);
-      // next(error);
-
-      // NOTE: No screenshot OK for now
-      resolve('');
-    } else {
-      const timestamp = Date.now().toString();
-      uploadFile(file.buffer, `screenshots/${timestamp}-lg.png`, file.mimetype)
-        .then(data => {
-          resolve(data.Location);
-        })
-        .catch(e => next(e));
-    }
+    const timestamp = Date.now().toString();
+    uploadFile(file.buffer, `screenshots/${timestamp}-lg.png`, file.mimetype)
+      .then(data => {
+        resolve(data.Location);
+      })
+      .catch(e => next(e));
   });
 
-  const article = new Article({
-    title: req.body.title,
-    uri: req.body.uri,
-    github: req.body.github,
-    description: req.body.description,
-    image: await imageLocation,
-    tags: req.body.tags,
-  });
+  const article = new Article({ ...form, image: await imageLocation });
 
+  // save article in database and send response
   const savedArticle = await article.save().catch(e => next(e));
   res.status(httpStatus.CREATED).json({ article: savedArticle });
 }
@@ -96,11 +79,8 @@ async function create(req, res, next) {
  */
 async function search(req, res, next) {
   const { q, offset } = req.query;
-  queryTerm(q, offset)
-    .then(results => {
-      res.json(results);
-    })
-    .catch(e => next(e));
+  const results = await queryTerm(q, offset).catch(e => next(e));
+  res.json(results);
 }
 
 /**
@@ -112,11 +92,8 @@ async function search(req, res, next) {
  */
 async function all(req, res, next) {
   const { offset } = req.query;
-  queryAll(offset)
-    .then(results => {
-      res.json(results);
-    })
-    .catch(e => next(e));
+  const results = await queryAll(offset).catch(e => next(e));
+  res.json(results);
 }
 
 module.exports = { load, get, create, parse, search, all };
