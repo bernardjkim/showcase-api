@@ -14,11 +14,11 @@ router
   .post(auth.parse, auth.authenticate, like.create);
 
 router
-  .route('/:articleId')
+  .route('/:article')
 
-  /** GET /api/like/:articleId - Get likes for specified article */
+  /** GET /api/like/:article - Get likes for specified article */
   .get(like.get);
 
-router.param('articleId', like.load);
+router.param('article', like.load);
 
 module.exports = router;
