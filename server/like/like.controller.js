@@ -49,8 +49,11 @@ async function create(req, res, next) {
 
   // create like and send response
   if (!(await likedByUser)) {
-    await Like.create({ article, user: req.user }).catch(e => next(e));
-    res.status(httpStatus.NO_CONTENT).send();
+    const like = await Like.create({
+      article: article['_id'],
+      user: req.user['_id'],
+    }).catch(e => next(e));
+    res.json({ like });
   }
 }
 
