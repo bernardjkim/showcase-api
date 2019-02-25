@@ -9,7 +9,6 @@ const compress = require('compression');
 const cors = require('cors');
 const httpStatus = require('http-status');
 const expressWinston = require('express-winston');
-const expressValidation = require('express-validation');
 const helmet = require('helmet');
 const winstonInstance = require('./winston');
 const routes = require('../server');
@@ -61,14 +60,15 @@ app.use('/api', routes);
 
 // if error is not an instanceOf APIError, convert it.
 app.use((err, req, res, next) => {
-  if (err instanceof expressValidation.ValidationError) {
-    // validation error contains errors which is an array of error each containing message[]
-    const unifiedErrorMessage = err.errors
-      .map(error => error.messages.join('. '))
-      .join(' and ');
-    const error = new APIError(unifiedErrorMessage, err.status, true);
-    return next(error);
-  }
+  // TODO: handle joi validation errors
+  // if (err instanceof expressValidation.ValidationError) {
+  //   // validation error contains errors which is an array of error each containing message[]
+  //   const unifiedErrorMessage = err.errors
+  //     .map(error => error.messages.join('. '))
+  //     .join(' and ');
+  //   const error = new APIError(unifiedErrorMessage, err.status, true);
+  //   return next(error);
+  // }
   if (!(err instanceof APIError)) {
     const apiError = new APIError(err.message, err.status, err.isPublic);
     return next(apiError);

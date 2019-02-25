@@ -2,18 +2,18 @@ const Joi = require('joi');
 
 module.exports = {
   // POST /api/auth
-  createAuth: {
-    body: {
+  createAuth: Joi.object({
+    body: Joi.object({
       email: Joi.string()
         .email({ minDomainAtoms: 2 })
         .required(),
       password: Joi.string().required(),
-    },
-  },
+    }),
+  }),
 
   // POST /api/user
-  createUser: {
-    body: {
+  createUser: Joi.object({
+    body: Joi.object({
       username: Joi.string()
         .regex(/^[a-zA-Z0-9]{1,30}$/)
         .required(),
@@ -33,8 +33,8 @@ module.exports = {
             },
           },
         }),
-    },
-  },
+    }),
+  }),
 
   createArticle: Joi.object({
     form: Joi.object({
