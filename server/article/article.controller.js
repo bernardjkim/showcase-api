@@ -1,6 +1,6 @@
 const qs = require('qs');
 const httpStatus = require('http-status');
-const APIError = require('../error/APIError');
+// const APIError = require('../error/APIError');
 const Article = require('./article.model');
 const { queryTerm, queryAll } = require('../../util/elasticsearch');
 
@@ -18,16 +18,9 @@ async function load(req, res, next, id) {
 /**
  * Parse the form and append to req.
  * This step is necessary because the form is received as a stringified object.
- *
  * @property  {string}  req.body.form - Stringified form data
  */
 function parse(req, res, next) {
-  if (!req.body.form) {
-    const error = new APIError('Missing form data', httpStatus.BAD_REQUEST);
-    next(error);
-    return;
-  }
-
   // parse form and append to req object
   req.form = qs.parse(req.body.form);
   next();
@@ -36,7 +29,6 @@ function parse(req, res, next) {
 /**
  * Get article
  * @param   {Article} req.article   - Requested Article
- *
  * @returns {Article}
  */
 function get(req, res) {
@@ -47,7 +39,6 @@ function get(req, res) {
  * Create new article
  * @property  {object}  req.form  - Website information
  * @property  {object}  req.file  - Website screenshot
- *
  */
 async function create(req, res, next) {
   const { file, form } = req;
@@ -71,10 +62,8 @@ async function create(req, res, next) {
 
 /**
  * Search articles with the given query
- *
  * @param   {string}  req.query.q       - Query string
  * @param   {number}  req.query.offset  - Query offset
- *
  * @returns {object}                    -  ES search result
  */
 async function search(req, res, next) {
@@ -85,9 +74,7 @@ async function search(req, res, next) {
 
 /**
  * Get all articles
- *
  * @param   {number}  req.query.offset  - Articles offset
- *
  * @returns {object}                    - ES search result
  */
 async function all(req, res, next) {

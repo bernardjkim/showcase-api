@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const validate = require('express-validation');
+const { validate } = require('../joi');
 const paramValidation = require('../../config/param-validation');
 
 const auth = require('./auth.controller');

@@ -1,10 +1,10 @@
 const express = require('express');
-const validate = require('express-validation');
 const multer = require('multer');
 const paramValidation = require('../../config/param-validation');
 const article = require('./article.controller');
 const auth = require('../auth/auth.controller');
 const { redisMiddleware } = require('../redis');
+const { validate } = require('../joi');
 
 const router = express.Router(); // eslint-disable-line new-cap
 

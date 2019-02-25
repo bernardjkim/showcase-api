@@ -1,5 +1,5 @@
 const express = require('express');
-const validate = require('express-validation');
+const { validate } = require('../joi');
 const paramValidation = require('../../config/param-validation');
 const user = require('./user.controller');
 const auth = require('../auth/auth.controller');
