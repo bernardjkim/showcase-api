@@ -1,7 +1,9 @@
 const httpStatus = require('http-status');
 const Like = require('./like.model');
+
 const Article = require('../article/article.model');
 const APIError = require('../error/APIError');
+const amqp = require('../../system/amqp');
 
 /**
  * Load number of likes and append to req
@@ -49,11 +51,17 @@ async function create(req, res, next) {
 
   // create like and send response
   if (!(await likedByUser)) {
-    const like = await Like.create({
+    const like = new Like({
       article: article['_id'],
       user: req.user['_id'],
-    }).catch(e => next(e));
-    res.json({ like });
+    });
+    amqp
+      .publish('like', 'like.event.create', Buffer.from(JSON.stringify(like)))
+      .then(ok => {
+        console.log('ok', ok);
+        res.json({ like });
+      })
+      .catch(e => next(e));
   }
 }
 
