@@ -7,10 +7,8 @@ const router = express.Router(); // eslint-disable-line new-cap
 
 router
   .route('/')
-
   /** GET /api/like - Get all list of user's likes */
-  .get(auth.parse, like.list)
-
+  // .get(auth.parse, like.list)
   /** POST /api/like - Create new like */
   .post(auth.parse, auth.authenticate, like.create);
 

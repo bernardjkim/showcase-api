@@ -14,8 +14,11 @@ router
 router
   .route('/:article')
 
-  /** GET /api/comment/:articleId - Get comments for specified article */
+  /** GET /api/comment/:article - Get comments for specified article */
   .get(redisMiddleware, comment.get);
+
+/** test no cache */
+router.route('/:article/bypass').get(comment.get);
 
 router.param('article', comment.load);
 

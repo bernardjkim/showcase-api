@@ -56,7 +56,7 @@ async function create(req, res, next) {
       user: req.user['_id'],
     });
     amqp
-      .publish('like', 'like.event.create', Buffer.from(JSON.stringify(like)))
+      .publish('likes', 'likes.event.create', Buffer.from(JSON.stringify(like)))
       .then(ok => {
         console.log('ok', ok);
         res.json({ like });
