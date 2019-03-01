@@ -4,15 +4,34 @@ const Like = require('./like.model');
 const Article = require('../article/article.model');
 const APIError = require('../error/APIError');
 const amqp = require('../../system/amqp');
+const AMQP_URL = 'amqp://rabbitmq:5672';
+let mqClient = null;
 
+async function init() {
+  mqClient = new amqp(AMQP_URL);
+  await mqClient.initialize();
+  await mqClient.createWorker(
+    'likes-create-success-queue',
+    'likes',
+    'likes.event.create.success',
+  );
+  await mqClient.createWorker(
+    'likes-get-success-queue',
+    'likes',
+    'likes.event.get.success',
+  );
+}
 /**
  * Load number of likes and append to req
  */
 async function load(req, res, next, id) {
-  const likes = await Like.getByArticle(id).catch(e => next(e));
-  req.articleId = id;
-  req.likes = likes;
-  return next();
+  const query = { article: id };
+
+  mqClient
+    .publish(Buffer.from(JSON.stringify(query)), 'likes', 'likes.event.get')
+    .then(doc => (req.likes = JSON.parse(doc.toString())))
+    .then(next)
+    .catch(next);
 }
 
 /**
@@ -22,7 +41,7 @@ async function load(req, res, next, id) {
  * @returns   {object}                - Object containing article id and number of likes
  */
 function get(req, res) {
-  return res.json({ articleId: req.articleId, likes: req.likes });
+  return res.json({ likes: req.likes });
 }
 
 /**
@@ -31,48 +50,35 @@ function get(req, res) {
  * @property  {User}    req.user            - User object
  */
 async function create(req, res, next) {
-  // verify user has not already liked the article
-  const likedByUser = new Promise(resolve => {
-    Like.findOne({
-      article: req.body.articleId,
-      user: req.user,
-    })
-      .then(liked => {
-        if (!liked) return resolve(false);
-
-        const error = new APIError('Already liked', httpStatus.BAD_REQUEST);
-        return next(error);
-      })
-      .catch(e => next(e));
-  });
-
-  // verify article exists
-  const article = await Article.get(req.body.articleId).catch(e => next(e));
-
-  // create like and send response
-  if (!(await likedByUser)) {
-    const like = new Like({
-      article: article['_id'],
-      user: req.user['_id'],
-    });
-    amqp
-      .publish('likes', 'likes.event.create', Buffer.from(JSON.stringify(like)))
-      .then(ok => {
-        console.log('ok', ok);
-        res.json({ like });
-      })
-      .catch(e => next(e));
-  }
+  const like = {
+    article: req.body.articleId,
+    user: req.user['_id'],
+  };
+  mqClient
+    .publish(Buffer.from(JSON.stringify(like)), 'likes', 'likes.event.create')
+    .then(doc => res.json({ like: JSON.parse(doc.toString()) }))
+    .catch(next);
 }
 
-/**
- * Get list of likes
- * @property  {User}    req.user  - User object
- * @returns   {Likes[]}           - Array of likes
- */
-async function list(req, res, next) {
-  const likes = await Like.find({ user: req.user['_id'] }).catch(e => next(e));
-  res.json({ likes });
+async function update(req, res, next) {
+  const query = {};
+  const like = {};
+  mqClient
+    .publish(
+      Buffer.from(
+        JSON.stringify({ query, like }),
+        'likes',
+        'likes.event.update',
+      ),
+    )
+    .then(doc => res.json({ like: JSON.parse(doc.toString()) }));
 }
 
-module.exports = { get, create, load, list };
+async function remove(req, res, next) {
+  const query = {};
+  mqClient
+    .publish(Buffer.from(JSON.stringify(query)), 'likes', 'likes.event.delete')
+    .then(doc => res.json({ like: JSON.parse(doc.toString()) }));
+}
+
+module.exports = { load, get, create, update, remove, init };

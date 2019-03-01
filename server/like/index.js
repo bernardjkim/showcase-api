@@ -5,6 +5,8 @@ const { redisMiddleware } = require('../redis');
 
 const router = express.Router(); // eslint-disable-line new-cap
 
+like.init();
+
 router
   .route('/')
   /** GET /api/like - Get all list of user's likes */

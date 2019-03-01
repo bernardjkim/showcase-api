@@ -1,6 +1,6 @@
 const bluebird = require('bluebird');
 const mongoose = require('./system/mongoose');
-const amqp = require('./system/amqp');
+// const amqp = require('./system/amqp');
 
 const config = require('./config/config');
 const app = require('./config/express');
@@ -12,7 +12,7 @@ Promise = bluebird; // eslint-disable-line no-global-assign
 mongoose.init();
 
 // initialize rabbitmq connection
-amqp.init();
+// amqp.init();
 
 // module.parent check is required to support mocha watch
 // src: https://github.com/mochajs/mocha/issues/1912
