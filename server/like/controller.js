@@ -1,8 +1,7 @@
 const httpStatus = require('http-status');
-const APIError = require('../error/APIError');
+// const APIError = require('../error/APIError');
 const mqClient = require('../../system/amqp');
 const { checkError, docToMsg, msgToDoc } = require('../../util/mq');
-// const rpc = require('./rpc');
 const EXCHANGE = 'api';
 
 /**
@@ -45,22 +44,30 @@ async function create(req, res, next) {
     .catch(next);
 }
 
+/**
+ * TODO:
+ */
 async function update(req, res, next) {
   const query = {};
   const like = {};
   mqClient
-    .publish(
-      Buffer.from(JSON.stringify({ query, like }), 'api', 'db.req.like.update'),
-    )
-    .then(doc => res.json({ like: JSON.parse(doc.toString()) }))
+    .publish(docToMsg({ query, like }), EXCHANGE, 'db.req.like.update')
+    .then(msgToDoc)
+    .then(checkError)
+    .then(doc => res.json({ like: doc.like }))
     .catch(next);
 }
 
+/**
+ * TODO:
+ */
 async function remove(req, res, next) {
   const query = {};
   mqClient
-    .publish(Buffer.from(JSON.stringify(query)), 'api', 'db.req.like.delete')
-    .then(doc => res.json({ like: JSON.parse(doc.toString()) }))
+    .publish(docToMsg(query), EXCHANGE, 'db.req.like.delete')
+    .then(msgToDoc)
+    .then(checkError)
+    .then(doc => res.json({ like: doc.like }))
     .catch(next);
 }
 

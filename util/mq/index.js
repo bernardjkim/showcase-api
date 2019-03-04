@@ -1,4 +1,3 @@
-const mqClient = require('../../system/amqp');
 const httpStatus = require('http-status');
 const APIError = require('../../server/error/APIError');
 
