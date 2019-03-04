@@ -39,9 +39,9 @@ const transports = [
     colorize: false,
     format: winston.format.combine(
       errorFilter(),
-      // winston.format.timestamp(),
-      // winston.format.prettyPrint(),
-      customFormat,
+      winston.format.timestamp(),
+      winston.format.prettyPrint(),
+      // customFormat,
     ),
   }),
   new DailyRotateFile({

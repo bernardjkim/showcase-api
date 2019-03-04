@@ -10,7 +10,7 @@ const router = express.Router(); // eslint-disable-line new-cap
 router
   .route('/')
   /** GET /api/user - Get list of users */
-  .get(redisMiddleware, user.list)
+  // .get(redisMiddleware, user.list)
 
   /** POST /api/user - Create new user */
   .post(validate(paramValidation.createUser), user.create);

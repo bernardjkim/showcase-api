@@ -1,199 +1,83 @@
-const EventEmitter = require('events');
-const amqp = require('amqplib');
-const uuid = require('uuid/v1');
+const amqp = require('./AMQPClient');
+const AMQP_URL = 'amqp://rabbitmq:5672';
+let mqClient = null;
 
-/**
- * AMQPClient is used to interface with a connected message broker. The class
- * provideds methods to publish messages to an exchange and to attach consumers
- * to a message queue.
- */
-class AMQPClient {
-  constructor(url) {
-    this.url = url;
-    this.conn = null;
-    this.ch = null;
-    this.closingOrClosed = false;
-  }
+async function init() {
+  mqClient = new amqp(AMQP_URL);
+  await mqClient.initialize();
 
-  /**
-   * Initializes mq connection.
-   * @returns {Promise}
-   */
-  initialize() {
-    return new Promise(async resolve => {
-      try {
-        // create connection
-        this.conn = await this._createConnection();
-        if (!this.conn) return;
+  const promises = [
+    /** article */
+    mqClient.bindExchange('api', 'db', 'db.res.article.get'),
+    mqClient.bindExchange('api', 'db', 'db.res.article.create'),
+    mqClient.bindExchange('api', 'db', 'db.res.article.update'),
+    mqClient.bindExchange('api', 'db', 'db.res.article.delete'),
+    mqClient.createWorker('db.res.article.get', 'api', 'db.res.article.get'),
+    mqClient.createWorker(
+      'db.res.article.create',
+      'api',
+      'db.res.article.create',
+    ),
+    mqClient.createWorker(
+      'db.res.article.update',
+      'api',
+      'db.res.article.update',
+    ),
+    mqClient.createWorker(
+      'db.res.article.delete',
+      'api',
+      'db.res.article.delete',
+    ),
 
-        // create channel
-        this.ch = await this._createChannel();
-        if (!this.ch) return;
-      } catch (err) {
-        this._handleError(err);
-        return;
-      }
+    /** auth */
+    mqClient.bindExchange('api', 'db', 'db.res.auth.create'),
+    mqClient.createWorker('db.res.auth.create', 'api', 'db.res.auth.create'),
 
-      // log and resolve
-      this.closingOrClosed = false;
-      console.log('[AMQP] connected');
-      resolve();
-    });
-  }
+    /** comment */
+    mqClient.bindExchange('api', 'db', 'db.res.comment.get'),
+    mqClient.bindExchange('api', 'db', 'db.res.comment.create'),
+    mqClient.bindExchange('api', 'db', 'db.res.comment.update'),
+    mqClient.bindExchange('api', 'db', 'db.res.comment.delete'),
+    mqClient.createWorker('db.res.comment.get', 'api', 'db.res.comment.get'),
+    mqClient.createWorker(
+      'db.res.comment.create',
+      'api',
+      'db.res.comment.create',
+    ),
+    mqClient.createWorker(
+      'db.res.comment.update',
+      'api',
+      'db.res.comment.update',
+    ),
+    mqClient.createWorker(
+      'db.res.comment.delete',
+      'api',
+      'db.res.comment.delete',
+    ),
 
-  /**
-   * Publishes the message to an exchange. Closes the mq connection on error.
-   * @param {Buffer} content    - Message content
-   * @param {string} exchange   - Exchange name
-   * @param {string} routingKey - Routing key
-   */
-  publish(content, exchange, routingKey, options = { persistent: true }) {
-    //TODO: validate params
-    const correlationId = uuid();
-    return new Promise(resolve => {
-      this.ch.responseEmitter.once(correlationId, resolve);
-      this.ch.publish(exchange, routingKey, content, {
-        ...options,
-        correlationId,
-      });
-      // if (!ok) this._handleError(new Error('publish error'));
-      // else return ok;
-    });
-  }
+    /** like */
+    mqClient.bindExchange('api', 'db', 'db.res.like.get'),
+    mqClient.bindExchange('api', 'db', 'db.res.like.create'),
+    mqClient.bindExchange('api', 'db', 'db.res.like.update'),
+    mqClient.bindExchange('api', 'db', 'db.res.like.delete'),
+    mqClient.createWorker('db.res.like.get', 'api', 'db.res.like.get'),
+    mqClient.createWorker('db.res.like.create', 'api', 'db.res.like.create'),
+    mqClient.createWorker('db.res.like.update', 'api', 'db.res.like.update'),
+    mqClient.createWorker('db.res.like.delete', 'api', 'db.res.like.delete'),
 
-  /**
-   * Create a worker process listening for messages for the specified
-   * queue/exchange/pattern.
-   * @param   {string}    queue     - Queue name
-   * @param   {string}    exchange  - Exchange binding
-   * @param   {string}    pattern   - Routing key pattern
-   * @returns {Promise}
-   */
-  createWorker(queue, exchange, pattern, options = { noAck: true }) {
-    this.ch.responseEmitter = new EventEmitter();
-    this.ch.responseEmitter.setMaxListeners(0);
-
-    const processMsg = msg => {
-      this.ch.responseEmitter.emit(msg.properties.correlationId, msg.content);
-    };
-
-    return Promise.all([
-      this.ch.assertQueue(queue),
-      this.ch.assertExchange(exchange),
-      this.ch.bindQueue(queue, exchange, pattern),
-      this.ch.consume(queue, processMsg, options),
-    ])
-      .then(() =>
-        console.log(`[AMQP] Worker started: ${queue} ${exchange} ${pattern}`),
-      )
-      .catch(err => this._handleError(err));
-  }
-
-  //============================================================================
-  //  Private
-  //============================================================================
-
-  /**
-   * Initializes the connection object
-   * @param   {object}  conn  - AMQP connection object
-   * @returns {Promise}       - Initialized AMQP connection object
-   */
-  async _createConnection() {
-    return new Promise((resolve, reject) => {
-      amqp
-        .connect(`${this.url}?heartbeat=60`)
-        .then(conn => {
-          conn.on('error', _err => reject(new Error('connection error')));
-          conn.on('close', () => reject(new Error('conneciton close')));
-          resolve(conn);
-        })
-        .catch(_err => reject(new Error('connection fail')));
-    });
-  }
-
-  /**
-   * Initializes the channel object
-   * @param   {object}  ch  - AMQP channel object
-   * @returns {Promise}     - Initialized AMQP channel object
-   */
-  async _createChannel() {
-    return new Promise((resolve, reject) => {
-      this.conn
-        .createConfirmChannel()
-        .then(ch => {
-          ch.on('error', _err => reject(new Error('channel error')));
-          ch.on('close', () => reject(new Error('channel close')));
-          resolve(ch);
-        })
-        .catch(_err => reject(new Error('channel fail')));
-    });
-  }
-
-  /**
-   * Returns a new function that takes in a msg and acknowledges the msg on
-   * success and rejects the msg on failure.
-   * @param   {Function}  handler - Handler function
-   * @param   {Buffer}    msg     - Rabbitmq message
-   * @returns {Function}          - New function that handles the msg then sends ack
-   */
-  _processMsg(handler) {
-    return msg => {
-      handler(msg)
-        .then(ok => this._ackMsg(ok, msg))
-        .catch(err => this._handleError(err));
-    };
-  }
-
-  /**
-   * Acknowledge that the message was handled
-   * @param {boolean} ok  - True if message was handled
-   * @param {Buffer}  msg - Message that was hanndled
-   */
-  _ackMsg(ok, msg) {
-    try {
-      if (ok) this.ch.ack(msg);
-      else this.ch.reject(msg, true);
-    } catch (err) {
-      this._handleError(err);
-    }
-  }
-
-  /**
-   * Handle all AMQP errors
-   * @param {Error} err - Handle AMQP errors
-   */
-  _handleError(err) {
-    // log error
-    console.error(`[AMQP] ERROR: ${err.message}`);
-
-    // handle error
-    switch (err.message) {
-      case 'connection fail':
-      case 'connection close':
-        setTimeout(() => this.initialize(), 5000);
-        break;
-
-      case 'channel fail':
-      case 'publish error':
-        this._closeConnection();
-        break;
-      default:
-        break;
-    }
-  }
-
-  /**
-   * Close connection. Ignore if connection is already closing or is already
-   * closed.
-   */
-  _closeConnection() {
-    if (!this.closingOrClosed) {
-      this.closingOrClosed = true;
-      this.conn = null;
-      this.ch = null;
-      this.conn.close();
-    }
-  }
+    /** user */
+    mqClient.bindExchange('api', 'db', 'db.res.user.get'),
+    mqClient.bindExchange('api', 'db', 'db.res.user.create'),
+    mqClient.bindExchange('api', 'db', 'db.res.user.update'),
+    mqClient.bindExchange('api', 'db', 'db.res.user.delete'),
+    mqClient.createWorker('db.res.user.get', 'api', 'db.res.user.get'),
+    mqClient.createWorker('db.res.user.create', 'api', 'db.res.user.create'),
+    mqClient.createWorker('db.res.user.update', 'api', 'db.res.user.update'),
+    mqClient.createWorker('db.res.user.delete', 'api', 'db.res.user.delete'),
+  ];
+  await Promise.all(promises);
 }
 
-module.exports = AMQPClient;
+init();
+
+module.exports = mqClient;

@@ -1,15 +1,22 @@
 const httpStatus = require('http-status');
-const Comment = require('./comment.model');
-const Article = require('../article/article.model');
+const mqClient = require('../../system/amqp');
 
 /**
  * Load comments and append to req
  */
 async function load(req, res, next, id) {
-  const comments = await Comment.getByArticle(id).catch(e => next(e));
-  req.articleId = id;
-  req.comments = comments;
-  return next();
+  const query = { article: id };
+
+  mqClient
+    .publish(Buffer.from(JSON.stringify(query)), 'api', 'db.req.comment.get')
+    .then(reply => {
+      const doc = JSON.parse(reply.toString());
+      if (doc.error)
+        return next(new APIError(doc.error.message), httpStatus.BAD_REQUEST);
+      req.comments = doc.comments;
+      next();
+    })
+    .catch(next);
 }
 
 /**
@@ -29,18 +36,25 @@ function get(req, res) {
  *
  */
 async function create(req, res, next) {
-  // verify article exists
-  const article = await Article.get(req.body.articleId).catch(e => next(e));
-
-  // create comment
-  const comment = await Comment.create({
-    article: article['_id'],
+  const comment = {
+    article: req.body.articleId,
+    user: req.user['_id'],
     value: req.body.value,
-    user: req.user,
-  });
+  };
 
-  // send response
-  res.status(httpStatus.CREATED).json({ comment });
+  mqClient
+    .publish(
+      Buffer.from(JSON.stringify(comment)),
+      'api',
+      'db.req.comment.create',
+    )
+    .then(reply => {
+      const doc = JSON.parse(reply.toString());
+      if (doc.error)
+        return next(new APIError(doc.error.message), httpStatus.BAD_REQUEST);
+      res.status(httpStatus.CREATED).json({ comment: doc.comment });
+    })
+    .catch(next);
 }
 
 module.exports = { get, create, load };

@@ -9,24 +9,12 @@ const envVarsSchema = Joi.object({
     .allow(['development', 'production', 'test', 'provision'])
     .default('development'),
   PORT: Joi.number().default(8080),
-  MONGOOSE_DEBUG: Joi.boolean().when('NODE_ENV', {
-    is: Joi.string().equal('development'),
-    then: Joi.boolean().default(true),
-    otherwise: Joi.boolean().default(false),
-  }),
   JWT_SECRET: Joi.string()
     .required()
     .description('JWT_SECRET required to sign'),
   COOKIE_PARSER_SECRET: Joi.string()
     .required()
     .description('COOKIE_PARSER_SECRET required to sign'),
-  MONGO_HOST: Joi.string()
-    .required()
-    .description('MONGO_HOST required'),
-  MONGO_PORT: Joi.number().default(27017),
-  MONGO_DB: Joi.string()
-    .required()
-    .description('MONGO_DB required'),
   AWS_ACCESS_KEY_ID: Joi.string()
     .required()
     .description('AWS_ACCESS_KEY_ID required'),
@@ -52,13 +40,7 @@ Joi.validate(process.env, envVarsSchema, (err, value) => {
   const config = {
     env: value.NODE_ENV,
     port: value.PORT,
-    mongooseDebug: value.MONGOOSE_DEBUG,
     jwtSecret: value.JWT_SECRET,
-    mongo: {
-      host: value.MONGO_HOST,
-      port: value.MONGO_PORT,
-      db: value.MONGO_DB,
-    },
     aws: {
       id: value.AWS_ACCESS_KEY_ID,
       key: value.AWS_SECRET_ACCESS_KEY,

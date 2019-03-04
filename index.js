@@ -1,15 +1,10 @@
 const bluebird = require('bluebird');
-const mongoose = require('./system/mongoose');
-// const amqp = require('./system/amqp');
 
 const config = require('./config/config');
 const app = require('./config/express');
 
 // make bluebird default Promise
 Promise = bluebird; // eslint-disable-line no-global-assign
-
-// initialize mongodb connection
-mongoose.init();
 
 // initialize rabbitmq connection
 // amqp.init();
