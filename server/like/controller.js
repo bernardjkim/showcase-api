@@ -1,5 +1,4 @@
 const httpStatus = require('http-status');
-// const APIError = require('../error/APIError');
 const mqClient = require('../../system/amqp');
 const { checkError, docToMsg, msgToDoc } = require('../../util/mq');
 const EXCHANGE = 'api';

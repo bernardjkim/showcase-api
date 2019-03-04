@@ -3,7 +3,7 @@ const router = express.Router();
 const { validate } = require('../joi');
 const paramValidation = require('../../config/param-validation');
 
-const auth = require('./auth.controller');
+const auth = require('./controller');
 
 router
   .route('/')

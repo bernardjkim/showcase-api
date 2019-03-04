@@ -1,9 +1,10 @@
 const qs = require('qs');
 const httpStatus = require('http-status');
-const APIError = require('../error/APIError');
 const { queryTerm, queryAll } = require('../../util/elasticsearch');
 const { uploadFile } = require('../../util/s3');
 const mqClient = require('../../system/amqp');
+const { checkError, docToMsg, msgToDoc } = require('../../util/mq');
+const EXCHANGE = 'api';
 
 /**
  * Load article and append to req
@@ -11,14 +12,10 @@ const mqClient = require('../../system/amqp');
 async function load(req, res, next, id) {
   const query = { _id: id };
   mqClient
-    .publish(Buffer.from(JSON.stringify(query)), 'api', 'db.req.article.get')
-    .then(reply => {
-      const doc = JSON.parse(reply.toString());
-      if (doc.error)
-        return next(new APIError(doc.error.message), httpStatus.BAD_REQUEST);
-      req.article = doc.articles[0];
-      next();
-    })
+    .publish(docToMsg(query), EXCHANGE, 'db.req.article.get')
+    .then(msgToDoc)
+    .then(checkError)
+    .then(doc => (req.article = doc.articles[0]))
     .catch(next);
 }
 
@@ -66,17 +63,10 @@ async function create(req, res, next) {
   };
 
   mqClient
-    .publish(
-      Buffer.from(JSON.stringify(article)),
-      'api',
-      'db.req.article.create',
-    )
-    .then(reply => {
-      const doc = JSON.parse(reply.toString());
-      if (doc.err)
-        return next(new APIError(doc.error.message), httpStatus.BAD_REQUEST);
-      res.status(httpStatus.CREATED).json({ article: doc.article });
-    })
+    .publish(docToMsg(article), EXCHANGE, 'db.req.article.create')
+    .then(msgToDoc)
+    .then(checkError)
+    .then(doc => res.status(httpStatus.CREATED).json({ article: doc.article }))
     .catch(next);
 }
 

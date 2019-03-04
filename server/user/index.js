@@ -1,8 +1,8 @@
 const express = require('express');
 const { validate } = require('../joi');
 const paramValidation = require('../../config/param-validation');
-const user = require('./user.controller');
-const auth = require('../auth/auth.controller');
+const user = require('./controller');
+const auth = require('../auth/controller');
 const { redisMiddleware } = require('../redis');
 
 const router = express.Router(); // eslint-disable-line new-cap

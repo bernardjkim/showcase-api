@@ -1,6 +1,6 @@
 const express = require('express');
-const comment = require('./comment.controller');
-const auth = require('../auth/auth.controller');
+const comment = require('./controller');
+const auth = require('../auth/controller');
 const { redisMiddleware } = require('../redis');
 
 const router = express.Router(); // eslint-disable-line new-cap

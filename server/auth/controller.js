@@ -2,6 +2,8 @@ const httpStatus = require('http-status');
 const APIError = require('../error/APIError');
 const { sign, decode } = require('../../util/jwt');
 const mqClient = require('../../system/amqp');
+const { checkError, docToMsg, msgToDoc } = require('../../util/mq');
+const EXCHANGE = 'api';
 
 /**
  * Returns jwt token if valid email and password is provided
@@ -19,22 +21,13 @@ async function create(req, res, next) {
 
   const auth = { email, password };
   mqClient
-    .publish(Buffer.from(JSON.stringify(auth)), 'api', 'db.req.auth.create')
-    .then(reply => {
-      const doc = JSON.parse(reply.toString());
-      if (doc.error)
-        return next(new APIError(doc.error.message), httpStatus.BAD_REQUEST);
-      return doc.user;
-    })
+    .publish(docToMsg(auth), EXCHANGE, 'db.req.auth.create')
+    .then(msgToDoc)
+    .then(checkError)
     .then(user => sign({ user }))
-    .then(token => {
-      console.log('token', token);
-      res
-        .status(httpStatus.NO_CONTENT)
-        .cookie('jwt', token, options)
-        .send();
-      return;
-    })
+    .then(token => res.cookie('jwt', token, options))
+    .then(() => res.status(httpStatus.NO_CONTENT))
+    .then(() => res.send())
     .catch(next);
 }
 
@@ -58,6 +51,7 @@ async function parse(req, res, next) {
 
   // decode jwt
   const decoded = await decode(token).catch(e => next(e));
+  console.log('decoded>>>>>>>', decoded);
   if (!decoded) return next();
   // const {iat, exp} = decoded;
 

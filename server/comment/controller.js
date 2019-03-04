@@ -1,21 +1,18 @@
 const httpStatus = require('http-status');
 const mqClient = require('../../system/amqp');
+const { checkError, docToMsg, msgToDoc } = require('../../util/mq');
+const EXCHANGE = 'api';
 
 /**
  * Load comments and append to req
  */
 async function load(req, res, next, id) {
   const query = { article: id };
-
   mqClient
-    .publish(Buffer.from(JSON.stringify(query)), 'api', 'db.req.comment.get')
-    .then(reply => {
-      const doc = JSON.parse(reply.toString());
-      if (doc.error)
-        return next(new APIError(doc.error.message), httpStatus.BAD_REQUEST);
-      req.comments = doc.comments;
-      next();
-    })
+    .publish(docToMsg(query), EXCHANGE, 'db.req.comment.get')
+    .then(msgToDoc)
+    .then(checkError)
+    .then(doc => (req.comments = doc.comments))
     .catch(next);
 }
 
@@ -43,17 +40,10 @@ async function create(req, res, next) {
   };
 
   mqClient
-    .publish(
-      Buffer.from(JSON.stringify(comment)),
-      'api',
-      'db.req.comment.create',
-    )
-    .then(reply => {
-      const doc = JSON.parse(reply.toString());
-      if (doc.error)
-        return next(new APIError(doc.error.message), httpStatus.BAD_REQUEST);
-      res.status(httpStatus.CREATED).json({ comment: doc.comment });
-    })
+    .publish(docToMsg(comment), EXCHANGE, 'db.req.comment.create')
+    .then(msgToDoc)
+    .then(checkError)
+    .then(doc => res.status(httpStatus.CREATED).json({ comment: doc.comment }))
     .catch(next);
 }
 
