@@ -13,6 +13,7 @@ async function load(req, res, next, id) {
     .then(msgToDoc)
     .then(checkError)
     .then(doc => (req.comments = doc.comments))
+    .then(() => next())
     .catch(next);
 }
 

@@ -22,22 +22,19 @@ class AMQPClient {
   initialize() {
     return new Promise(async resolve => {
       try {
-        // create connection
-        this.conn = await this._createConnection();
-        if (!this.conn) return;
+        // initialize connection/channel
+        this.conn = await this._initConnection();
+        this.ch = await this._initChannel();
 
-        // create channel
-        this.ch = await this._createChannel();
-        if (!this.ch) return;
+        // log & resolve
+        this.closingOrClosed = false;
+        console.log('[AMQP] connected');
+        resolve();
       } catch (err) {
-        this._handleError(err);
-        return;
+        // log & retry
+        console.error(`[AMQP] ERROR: ${err.message}`);
+        setTimeout(() => this.initialize().then(resolve), 5000);
       }
-
-      // log and resolve
-      this.closingOrClosed = false;
-      console.log('[AMQP] connected');
-      resolve();
     });
   }
 
@@ -69,30 +66,27 @@ class AMQPClient {
    */
   createWorker(queue, exchange, pattern, options = { noAck: true }) {
     const processMsg = msg => {
+      console.log(msg);
       this.ch.responseEmitter.emit(msg.properties.correlationId, msg.content);
     };
 
     return Promise.all([
       this.ch.assertQueue(queue),
-      this.ch.assertExchange(exchange),
+      this.ch.assertExchange(exchange, 'topic'),
       this.ch.bindQueue(queue, exchange, pattern),
       this.ch.consume(queue, processMsg, options),
     ])
-      .then(() =>
-        console.log(`[AMQP] Worker started: ${queue} ${exchange} ${pattern}`),
-      )
+      .then(() => console.log(`[AMQP] Worker started: ${queue} ${exchange} ${pattern}`))
       .catch(err => this._handleError(err));
   }
 
   bindExchange(destination, source, pattern) {
     return Promise.all([
-      this.ch.assertExchange(destination),
-      this.ch.assertExchange(source),
+      this.ch.assertExchange(destination, 'topic'),
+      this.ch.assertExchange(source, 'topic'),
       this.ch.bindExchange(destination, source, pattern),
     ])
-      .then(() =>
-        console.log(`[AMQP] ${destination} bound to ${source} on ${pattern}`),
-      )
+      .then(() => console.log(`[AMQP] ${destination} bound to ${source} on ${pattern}`))
       .catch(err => this._handleError(err));
   }
 
@@ -105,13 +99,13 @@ class AMQPClient {
    * @param   {object}  conn  - AMQP connection object
    * @returns {Promise}       - Initialized AMQP connection object
    */
-  async _createConnection() {
+  async _initConnection() {
     return new Promise((resolve, reject) => {
       amqp
         .connect(`${this.url}?heartbeat=60`)
         .then(conn => {
-          conn.on('error', _err => reject(new Error('connection error')));
-          conn.on('close', () => reject(new Error('conneciton close')));
+          conn.on('error', _err => this._handleError(new Error('connection error')));
+          conn.on('close', () => this._handleError(new Error('connection close')));
           resolve(conn);
         })
         .catch(_err => reject(new Error('connection fail')));
@@ -123,15 +117,15 @@ class AMQPClient {
    * @param   {object}  ch  - AMQP channel object
    * @returns {Promise}     - Initialized AMQP channel object
    */
-  async _createChannel() {
+  async _initChannel() {
     return new Promise((resolve, reject) => {
       this.conn
         .createConfirmChannel()
         .then(ch => {
           ch.responseEmitter = new EventEmitter();
           ch.responseEmitter.setMaxListeners(0);
-          ch.on('error', _err => reject(new Error('channel error')));
-          ch.on('close', () => reject(new Error('channel close')));
+          ch.on('error', _err => this._handleError(new Error('channel error')));
+          ch.on('close', () => this._handleError(new Error('channel close')));
           resolve(ch);
         })
         .catch(_err => reject(new Error('channel fail')));
@@ -177,12 +171,10 @@ class AMQPClient {
 
     // handle error
     switch (err.message) {
-      case 'connection fail':
       case 'connection close':
         setTimeout(() => this.initialize(), 5000);
         break;
 
-      case 'channel fail':
       case 'publish error':
         this._closeConnection();
         break;

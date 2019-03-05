@@ -6,9 +6,6 @@ const app = require('./config/express');
 // make bluebird default Promise
 Promise = bluebird; // eslint-disable-line no-global-assign
 
-// initialize rabbitmq connection
-// amqp.init();
-
 // module.parent check is required to support mocha watch
 // src: https://github.com/mochajs/mocha/issues/1912
 if (!module.parent) {

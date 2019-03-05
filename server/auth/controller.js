@@ -24,7 +24,7 @@ async function create(req, res, next) {
     .publish(docToMsg(auth), EXCHANGE, 'db.req.auth.create')
     .then(msgToDoc)
     .then(checkError)
-    .then(user => sign({ user }))
+    .then(sign)
     .then(token => res.cookie('jwt', token, options))
     .then(() => res.status(httpStatus.NO_CONTENT))
     .then(() => res.send())
@@ -51,7 +51,6 @@ async function parse(req, res, next) {
 
   // decode jwt
   const decoded = await decode(token).catch(e => next(e));
-  console.log('decoded>>>>>>>', decoded);
   if (!decoded) return next();
   // const {iat, exp} = decoded;
 

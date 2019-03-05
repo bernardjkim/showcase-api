@@ -16,6 +16,7 @@ async function load(req, res, next, id) {
     .then(msgToDoc)
     .then(checkError)
     .then(doc => (req.article = doc.articles[0]))
+    .then(() => next())
     .catch(next);
 }
 
