@@ -1,7 +1,7 @@
 const redis = require('../../util/redis');
 
 async function redisMiddleware(req, res, next) {
-  let key = `__expIress__${req.originalUrl}` || req.url;
+  let key = `__express__${req.originalUrl}` || req.url;
 
   // read cached data
   const data = await redis.getAsync(key);
