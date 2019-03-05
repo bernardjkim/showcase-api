@@ -1,7 +1,9 @@
 const httpStatus = require('http-status');
 const APIError = require('../error/APIError');
-const User = require('../user/user.model');
 const { sign, decode } = require('../../util/jwt');
+const mqClient = require('../../system/amqp');
+const { checkError, docToMsg, msgToDoc } = require('../../util/mq');
+const EXCHANGE = 'api';
 
 /**
  * Returns jwt token if valid email and password is provided
@@ -11,31 +13,22 @@ const { sign, decode } = require('../../util/jwt');
  */
 async function create(req, res, next) {
   const { email, password } = req.body;
-
-  // validate email
-  const user = await User.findOne({ email }).catch(e => next(e));
-  if (!user) {
-    const error = new APIError('Invalid email!', httpStatus.NOT_FOUND);
-    next(error);
-    return;
-  }
-
-  // validate password
-  const validPass = await user.comparePassword(password).catch(e => next(e));
-
-  // create jwt
-  const token = await sign({ user: user.toJSON() }).catch(e => next(e));
   const options = {
     // maxAge: 1000 * 60 * 15, // would expire after 15 minutes
     httpOnly: true, // The cookie only accessible by the web server
     signed: true, // Indicates if the cookie should be signed
   };
 
-  if (validPass && token) {
-    // set cookie and send response
-    res.cookie('jwt', token, options);
-    res.status(httpStatus.NO_CONTENT).send();
-  }
+  const auth = { email, password };
+  mqClient
+    .publish(docToMsg(auth), EXCHANGE, 'db.req.auth.create')
+    .then(msgToDoc)
+    .then(checkError)
+    .then(sign)
+    .then(token => res.cookie('jwt', token, options))
+    .then(() => res.status(httpStatus.NO_CONTENT))
+    .then(() => res.send())
+    .catch(next);
 }
 
 /**
@@ -58,12 +51,11 @@ async function parse(req, res, next) {
 
   // decode jwt
   const decoded = await decode(token).catch(e => next(e));
+  if (!decoded) return next();
   // const {iat, exp} = decoded;
 
-  // validate user still exists in database
-  const user = await User.findById(decoded.user['_id']).catch(e => next(e));
-  req.user = user;
-  return next();
+  req.user = decoded.user;
+  next();
 }
 
 /**

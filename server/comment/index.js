@@ -1,6 +1,6 @@
 const express = require('express');
-const comment = require('./comment.controller');
-const auth = require('../auth/auth.controller');
+const comment = require('./controller');
+const auth = require('../auth/controller');
 const { redisMiddleware } = require('../redis');
 
 const router = express.Router(); // eslint-disable-line new-cap
@@ -14,8 +14,11 @@ router
 router
   .route('/:article')
 
-  /** GET /api/comment/:articleId - Get comments for specified article */
+  /** GET /api/comment/:article - Get comments for specified article */
   .get(redisMiddleware, comment.get);
+
+/** test no cache */
+router.route('/:article/bypass').get(comment.get);
 
 router.param('article', comment.load);
 

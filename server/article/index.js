@@ -1,8 +1,8 @@
 const express = require('express');
 const multer = require('multer');
 const paramValidation = require('../../config/param-validation');
-const article = require('./article.controller');
-const auth = require('../auth/auth.controller');
+const article = require('./controller');
+const auth = require('../auth/controller');
 const { redisMiddleware } = require('../redis');
 const { validate } = require('../joi');
 
