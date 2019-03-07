@@ -66,7 +66,6 @@ class AMQPClient {
    */
   createWorker(queue, exchange, pattern, options = { noAck: true }) {
     const processMsg = msg => {
-      console.log(msg);
       this.ch.responseEmitter.emit(msg.properties.correlationId, msg.content);
     };
 

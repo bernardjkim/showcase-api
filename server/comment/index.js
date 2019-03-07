@@ -1,25 +1,23 @@
 const express = require('express');
 const comment = require('./controller');
 const auth = require('../auth/controller');
-const { redisMiddleware } = require('../redis');
 
 const router = express.Router(); // eslint-disable-line new-cap
 
 router
   .route('/')
+  /** GET /api/comment/?article=${article} - Get comments for specified article */
+  .get(comment.list)
 
   /** POST /api/comment - Create new comment */
   .post(auth.parse, auth.authenticate, comment.create);
 
 router
-  .route('/:article')
+  .route('/:comment')
 
-  /** GET /api/comment/:article - Get comments for specified article */
-  .get(redisMiddleware, comment.get);
+  /** GET /api/comment/:comment - Get specified comment */
+  .get(comment.get);
 
-/** test no cache */
-router.route('/:article/bypass').get(comment.get);
-
-router.param('article', comment.load);
+router.param('comment', comment.load);
 
 module.exports = router;

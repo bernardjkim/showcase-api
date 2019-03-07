@@ -15,7 +15,7 @@ async function load(req, res, next, id) {
     .publish(docToMsg(query), EXCHANGE, 'db.req.article.get')
     .then(msgToDoc)
     .then(checkError)
-    .then(doc => (req.article = doc.articles[0]))
+    .then(content => (req.article = content.doc))
     .then(() => next())
     .catch(next);
 }

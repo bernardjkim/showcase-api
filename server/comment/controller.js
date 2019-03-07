@@ -7,12 +7,12 @@ const EXCHANGE = 'api';
  * Load comments and append to req
  */
 async function load(req, res, next, id) {
-  const query = { article: id };
+  const query = { _id: id };
   mqClient
     .publish(docToMsg(query), EXCHANGE, 'db.req.comment.get')
     .then(msgToDoc)
     .then(checkError)
-    .then(doc => (req.comments = doc.comments))
+    .then(content => (req.comment = content.doc))
     .then(() => next())
     .catch(next);
 }
@@ -24,6 +24,20 @@ async function load(req, res, next, id) {
  */
 function get(req, res) {
   return res.json({ comments: req.comments });
+}
+
+/**
+ * TODO
+ */
+function list(req, res, next) {
+  const { article, user } = req.query;
+  const query = { article, user };
+  mqClient
+    .publish(docToMsg(query), EXCHANGE, 'db.req.comment.list')
+    .then(msgToDoc)
+    .then(checkError)
+    .then(content => res.json({ comments: content.docs }))
+    .catch(next);
 }
 
 /**
@@ -44,8 +58,18 @@ async function create(req, res, next) {
     .publish(docToMsg(comment), EXCHANGE, 'db.req.comment.create')
     .then(msgToDoc)
     .then(checkError)
-    .then(doc => res.status(httpStatus.CREATED).json({ comment: doc.comment }))
+    .then(content => res.status(httpStatus.CREATED).json({ comment: content.doc }))
     .catch(next);
 }
 
-module.exports = { get, create, load };
+/**
+ * TODO
+ */
+function update() {}
+
+/**
+ * TODO
+ */
+function remove() {}
+
+module.exports = { get, list, create, load, update, remove };

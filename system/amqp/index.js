@@ -1,10 +1,10 @@
 const amqp = require('./AMQPClient');
-const AMQP_URL = 'amqp://rabbitmq:5672';
+const config = require('../../config/config');
 
 let mqClient = null;
 
 async function init() {
-  mqClient = new amqp(AMQP_URL);
+  mqClient = new amqp(`amqp://${config.rabbit.host}:${config.rabbit.port}`);
 
   mqClient
     .initialize()

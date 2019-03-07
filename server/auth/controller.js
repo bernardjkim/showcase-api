@@ -24,7 +24,7 @@ async function create(req, res, next) {
     .publish(docToMsg(auth), EXCHANGE, 'db.req.auth.create')
     .then(msgToDoc)
     .then(checkError)
-    .then(sign)
+    .then(content => sign({ user: content.doc }))
     .then(token => res.cookie('jwt', token, options))
     .then(() => res.status(httpStatus.NO_CONTENT))
     .then(() => res.send())
