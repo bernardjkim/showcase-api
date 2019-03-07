@@ -24,10 +24,15 @@ module.exports = function(mqClient) {
       const { correlationId } = properties;
       const obj = msgToDoc(content);
       const like = obj.doc;
-      const key = `__express__/api/like/${like['_id']}`;
+      // cache individual like
+      const key = `like.id:${query['_id']}`;
+      memCache.put(key, { like }, 60 * 1000);
 
-      // FOR NOW ASSUME NO ERRORS
-      memCache.put(key, { like }, 10 * 1000);
+      // cache set references
+      const setKey = `likes.article:${query['article']}.user:${query['user']}`;
+      const refs = memCache.get(setKey);
+      refs.add(like['_id']);
+      memCache.put(refs, refs, 60 * 1000);
       resolve(true);
     });
   }
@@ -45,10 +50,10 @@ module.exports = function(mqClient) {
       const obj = msgToDoc(content);
       const query = obj.query;
       const like = obj.doc;
-      const key = `__express__/api/like/${query['_id']}`;
+      const key = `like.id:${query['_id']}`;
 
       // ASSUME NO ERRORS
-      memCache.put(key, { like }, 10 * 1000);
+      memCache.put(key, { like }, 60 * 1000);
       resolve(true);
     });
   }
@@ -63,23 +68,19 @@ module.exports = function(mqClient) {
       const obj = msgToDoc(content);
       const query = obj.query;
       const likes = obj.docs;
+      const refs = new Set();
 
-      const sorted = {};
-      Object.keys(query)
-        .sort()
-        .forEach(key => {
-          sorted[key] = query[key];
-        });
+      // cache individual likes
+      likes.forEach(like => {
+        const key = `like.id:${like['_id']}`;
+        refs.add(like['_id']);
+        memCache.put(key, like, 60 * 1000);
+      });
 
-      const serialized = {
-        base: '/api/like',
-        fields: sorted,
-      };
+      // cache list of references
+      const key = `likes.article:${query['article']}.user:${query['user']}`;
+      memCache.put(key, refs, 60 * 1000);
 
-      const key = `__express__${SHA256(JSON.stringify(serialized))}`;
-
-      // ASSUME NO ERRORS
-      memCache.put(key, { likes }, 10 * 1000);
       resolve(true);
     });
   }
@@ -99,7 +100,7 @@ module.exports = function(mqClient) {
       const key = `__express__/api/like/${like['_id']}`;
 
       // ASUME NO ERRORS
-      memCache.put(key, { like }, 10 * 1000);
+      memCache.put(key, { like }, 60 * 1000);
       resolve(true);
     });
   }
@@ -118,7 +119,7 @@ module.exports = function(mqClient) {
       const key = `__express__/api/like/${like['_id']}`;
 
       // ASUME NO ERRORS
-      memCache.put(key, { like }, 10 * 1000);
+      memCache.put(key, { like }, 60 * 1000);
       resolve(true);
     });
   }

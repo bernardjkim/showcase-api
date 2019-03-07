@@ -23,9 +23,11 @@ module.exports = function(mqClient) {
       const { correlationId } = properties;
       const obj = msgToDoc(content);
       const user = obj.doc;
-      const key = `__express__/api/user/${user['_id']}`;
 
-      // FOR NOW ASSUME NO ERRORS
+      // cache individual doc
+      const docKey = `user.id:${query['_id']}`;
+      memCache.put(docKey, { user }, 60 * 1000);
+
       memCache.put(key, { user }, 10 * 1000);
       resolve(true);
     });
@@ -44,10 +46,10 @@ module.exports = function(mqClient) {
       const obj = msgToDoc(content);
       const query = obj.query;
       const user = obj.doc;
-      const key = `__express__/api/user/${query['_id']}`;
+      const key = `user.id:${query['_id']}`;
 
       // ASSUME NO ERRORS
-      memCache.put(key, { user }, 10 * 1000);
+      memCache.put(key, { user }, 60 * 1000);
       resolve(true);
     });
   }

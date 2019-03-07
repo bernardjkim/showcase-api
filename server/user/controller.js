@@ -1,4 +1,5 @@
 const httpStatus = require('http-status');
+const { memCache, lookup } = require('../../system/cache');
 const mqClient = require('../../system/amqp');
 const { checkError, docToMsg, msgToDoc } = require('../../util/mq');
 const EXCHANGE = 'api';
@@ -19,9 +20,22 @@ function current(req, res, next) {
  * @property  {User}  req.user  - User object
  * @returns   {User}
  */
-function get(req, res, next) {
-  const query = { _id: req.params.user };
+async function get(req, res, next) {
+  const id = req.params.user;
+  if (!id) return res.json({});
+
+  const key = `user.id:${id}`;
+  let user = memCache.get(key);
+
+  // hit
+  if (user) return res.json(user);
+
+  // miss
+  const query = { _id: id };
   mqClient.publish(docToMsg(query), EXCHANGE, 'db.req.user.get').catch(next);
+  user = await lookup(key);
+
+  return res.json(user);
 }
 
 /**

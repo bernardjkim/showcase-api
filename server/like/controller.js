@@ -1,5 +1,6 @@
 const httpStatus = require('http-status');
 const mqClient = require('../../system/amqp');
+const { memCache, lookup } = require('../../system/cache');
 const { checkError, docToMsg, msgToDoc } = require('../../util/mq');
 const EXCHANGE = 'api';
 
@@ -8,18 +9,44 @@ const EXCHANGE = 'api';
  * @property  {Like[]}  req.likes - Number of likes for article
  * @returns   {Like[]}            - Object containing article id and number of likes
  */
-function get(req, res, next) {
+async function get(req, res, next) {
+  const key = `like.id:${req.params.like}`;
+  let like = memCache.get(key);
+
+  // hit
+  if (like) return res.json(like);
+
+  // miss
   const query = { _id: req.params.like };
   mqClient.publish(docToMsg(query), EXCHANGE, 'db.req.like.get').catch(next);
+  like = await lookup(key);
+
+  return res.json(like);
 }
 
 /**
  * TODO
  */
-function list(req, res, next) {
+async function list(req, res, next) {
   const { article, user } = req.query;
+  const key = `likes.article:${article}.user:${user}`;
+  let likes = memCache.get(key);
+
+  // hit
+  if (likes) {
+    const likeList = [];
+    likes.forEach(like => {
+      likeList.push(memCache.get(`like.id:${like}`));
+    });
+    return res.json(likeList);
+  }
+
+  // miss
   const query = { article, user };
   mqClient.publish(docToMsg(query), EXCHANGE, 'db.req.like.list').catch(next);
+  likes = await lookup(key);
+
+  return res.json(likes);
 }
 
 /**
