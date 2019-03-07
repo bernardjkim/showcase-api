@@ -1,22 +1,22 @@
 const express = require('express');
 const like = require('./controller');
 const auth = require('../auth/controller');
-const { redisMiddleware } = require('../redis');
+const { cacheMiddleware } = require('../../system/cache');
 
 const router = express.Router(); // eslint-disable-line new-cap
 
 router
   .route('/')
+  /** GET /api/like/?article=${article}&user=${user} - Get list of likes */
+  .get(cacheMiddleware(30), like.list)
 
   /** POST /api/like - Create new like */
   .post(auth.parse, auth.authenticate, like.create);
 
 router
-  .route('/:article')
+  .route('/:like')
 
-  /** GET /api/like/:article - Get likes for specified article */
-  .get(redisMiddleware, like.get);
-
-router.param('article', like.load);
+  /** GET /api/like/:like - Get the specified like */
+  .get(cacheMiddleware(30), like.get);
 
 module.exports = router;

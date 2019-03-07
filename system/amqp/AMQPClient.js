@@ -48,7 +48,6 @@ class AMQPClient {
     //TODO: validate params
     const correlationId = uuid();
     return new Promise(resolve => {
-      this.ch.responseEmitter.once(correlationId, resolve);
       this.ch.publish(exchange, routingKey, content, {
         ...options,
         correlationId,
@@ -64,17 +63,12 @@ class AMQPClient {
    * @param   {string}    pattern   - Routing key pattern
    * @returns {Promise}
    */
-  createWorker(queue, exchange, pattern, options = { noAck: true }) {
-    const processMsg = msg => {
-      console.log(msg);
-      this.ch.responseEmitter.emit(msg.properties.correlationId, msg.content);
-    };
-
+  createWorker(handler, queue, exchange, pattern, options = { noAck: false }) {
     return Promise.all([
       this.ch.assertQueue(queue),
       this.ch.assertExchange(exchange, 'topic'),
       this.ch.bindQueue(queue, exchange, pattern),
-      this.ch.consume(queue, processMsg, options),
+      this.ch.consume(queue, this._processMsg(handler), options),
     ])
       .then(() => console.log(`[AMQP] Worker started: ${queue} ${exchange} ${pattern}`))
       .catch(err => this._handleError(err));
@@ -104,7 +98,7 @@ class AMQPClient {
       amqp
         .connect(`${this.url}?heartbeat=60`)
         .then(conn => {
-          conn.on('error', _err => this._handleError(new Error('connection error')));
+          conn.on('error', err => this._handleError(err));
           conn.on('close', () => this._handleError(new Error('connection close')));
           resolve(conn);
         })
@@ -124,7 +118,7 @@ class AMQPClient {
         .then(ch => {
           ch.responseEmitter = new EventEmitter();
           ch.responseEmitter.setMaxListeners(0);
-          ch.on('error', _err => this._handleError(new Error('channel error')));
+          ch.on('error', err => this._handleError(err));
           ch.on('close', () => this._handleError(new Error('channel close')));
           resolve(ch);
         })

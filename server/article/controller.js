@@ -1,24 +1,11 @@
 const qs = require('qs');
-const httpStatus = require('http-status');
-const { queryTerm, queryAll } = require('../../util/elasticsearch');
-const { uploadFile } = require('../../util/s3');
 const mqClient = require('../../system/amqp');
+const httpStatus = require('http-status');
+const { memCache } = require('../../system/cache');
+const { uploadFile } = require('../../util/s3');
+const { queryTerm, queryAll } = require('../../util/elasticsearch');
 const { checkError, docToMsg, msgToDoc } = require('../../util/mq');
 const EXCHANGE = 'api';
-
-/**
- * Load article and append to req
- */
-async function load(req, res, next, id) {
-  const query = { _id: id };
-  mqClient
-    .publish(docToMsg(query), EXCHANGE, 'db.req.article.get')
-    .then(msgToDoc)
-    .then(checkError)
-    .then(doc => (req.article = doc.articles[0]))
-    .then(() => next())
-    .catch(next);
-}
 
 /**
  * Parse the form and append to req.
@@ -36,8 +23,9 @@ function parse(req, res, next) {
  * @param   {Article} req.article   - Requested Article
  * @returns {Article}
  */
-function get(req, res) {
-  return res.json({ article: req.article });
+function get(req, res, next) {
+  const query = { _id: req.params.article };
+  mqClient.publish(docToMsg(query), EXCHANGE, 'db.req.article.get').catch(next);
 }
 
 /**
@@ -55,7 +43,7 @@ async function create(req, res, next) {
       .then(data => {
         resolve(data.Location);
       })
-      .catch(e => next(e));
+      .catch(next);
   });
 
   const article = {
@@ -63,12 +51,7 @@ async function create(req, res, next) {
     image: await imageLocation,
   };
 
-  mqClient
-    .publish(docToMsg(article), EXCHANGE, 'db.req.article.create')
-    .then(msgToDoc)
-    .then(checkError)
-    .then(doc => res.status(httpStatus.CREATED).json({ article: doc.article }))
-    .catch(next);
+  mqClient.publish(docToMsg(article), EXCHANGE, 'db.req.article.create').catch(next);
 }
 
 /**
@@ -79,8 +62,9 @@ async function create(req, res, next) {
  */
 async function search(req, res, next) {
   const { q, offset } = req.query;
-  const results = await queryTerm(q, offset).catch(e => next(e));
-  res.json(results);
+  const results = await queryTerm(q, offset).catch(next);
+  const key = `__express__${req.originalUrl}`;
+  memCache.put(key, results, 10 * 1000);
 }
 
 /**
@@ -90,8 +74,9 @@ async function search(req, res, next) {
  */
 async function all(req, res, next) {
   const { offset } = req.query;
-  const results = await queryAll(offset).catch(e => next(e));
-  res.json(results);
+  const results = await queryAll(offset).catch(next);
+  const key = `__express__${req.originalUrl}`;
+  memCache.put(key, results, 10 * 1000);
 }
 
-module.exports = { load, get, create, parse, search, all };
+module.exports = { get, create, parse, search, all };

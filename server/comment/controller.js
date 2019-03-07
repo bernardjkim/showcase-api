@@ -8,13 +8,7 @@ const EXCHANGE = 'api';
  */
 async function load(req, res, next, id) {
   const query = { article: id };
-  mqClient
-    .publish(docToMsg(query), EXCHANGE, 'db.req.comment.get')
-    .then(msgToDoc)
-    .then(checkError)
-    .then(doc => (req.comments = doc.comments))
-    .then(() => next())
-    .catch(next);
+  mqClient.publish(docToMsg(query), EXCHANGE, 'db.req.comment.get').catch(next);
 }
 
 /**
@@ -22,8 +16,18 @@ async function load(req, res, next, id) {
  * @property  {Comment[]} - Array of comments
  * @returns   {Comment[]}
  */
-function get(req, res) {
-  return res.json({ comments: req.comments });
+function get(req, res, next) {
+  const query = { article: req.params.article };
+  mqClient.publish(docToMsg(query), EXCHANGE, 'db.req.comment.get').catch(next);
+}
+
+/**
+ * TODO
+ */
+function list(req, res, next) {
+  const { article, user } = req.query;
+  const query = { article, user };
+  mqClient.publish(docToMsg(query), EXCHANGE, 'db.req.comment.list').catch(next);
 }
 
 /**
@@ -40,12 +44,7 @@ async function create(req, res, next) {
     value: req.body.value,
   };
 
-  mqClient
-    .publish(docToMsg(comment), EXCHANGE, 'db.req.comment.create')
-    .then(msgToDoc)
-    .then(checkError)
-    .then(doc => res.status(httpStatus.CREATED).json({ comment: doc.comment }))
-    .catch(next);
+  mqClient.publish(docToMsg(comment), EXCHANGE, 'db.req.comment.create').catch(next);
 }
 
-module.exports = { get, create, load };
+module.exports = { get, list, create, load };

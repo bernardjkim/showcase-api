@@ -4,26 +4,22 @@ const { checkError, docToMsg, msgToDoc } = require('../../util/mq');
 const EXCHANGE = 'api';
 
 /**
- * Load number of likes and append to req
- */
-async function load(req, res, next, id) {
-  const query = { article: id };
-  mqClient
-    .publish(docToMsg(query), EXCHANGE, 'db.req.like.get')
-    .then(msgToDoc)
-    .then(checkError)
-    .then(doc => (req.likes = doc.likes))
-    .then(() => next())
-    .catch(next);
-}
-
-/**
  * Get likes
  * @property  {Like[]}  req.likes - Number of likes for article
  * @returns   {Like[]}            - Object containing article id and number of likes
  */
-function get(req, res) {
-  return res.json({ likes: req.likes });
+function get(req, res, next) {
+  const query = { _id: req.params.like };
+  mqClient.publish(docToMsg(query), EXCHANGE, 'db.req.like.get').catch(next);
+}
+
+/**
+ * TODO
+ */
+function list(req, res, next) {
+  const { article, user } = req.query;
+  const query = { article, user };
+  mqClient.publish(docToMsg(query), EXCHANGE, 'db.req.like.list').catch(next);
 }
 
 /**
@@ -36,12 +32,7 @@ async function create(req, res, next) {
     article: req.body.articleId,
     user: req.user['_id'],
   };
-  mqClient
-    .publish(docToMsg(like), EXCHANGE, 'db.req.like.create')
-    .then(msgToDoc)
-    .then(checkError)
-    .then(doc => res.status(httpStatus.CREATED).json({ like: doc.like }))
-    .catch(next);
+  mqClient.publish(docToMsg(like), EXCHANGE, 'db.req.like.create').catch(next);
 }
 
 /**
@@ -50,12 +41,7 @@ async function create(req, res, next) {
 async function update(req, res, next) {
   const query = {};
   const like = {};
-  mqClient
-    .publish(docToMsg({ query, like }), EXCHANGE, 'db.req.like.update')
-    .then(msgToDoc)
-    .then(checkError)
-    .then(doc => res.json({ like: doc.like }))
-    .catch(next);
+  mqClient.publish(docToMsg({ query, like }), EXCHANGE, 'db.req.like.update').catch(next);
 }
 
 /**
@@ -63,12 +49,7 @@ async function update(req, res, next) {
  */
 async function remove(req, res, next) {
   const query = {};
-  mqClient
-    .publish(docToMsg(query), EXCHANGE, 'db.req.like.delete')
-    .then(msgToDoc)
-    .then(checkError)
-    .then(doc => res.json({ like: doc.like }))
-    .catch(next);
+  mqClient.publish(docToMsg(query), EXCHANGE, 'db.req.like.delete').catch(next);
 }
 
-module.exports = { load, get, create, update, remove };
+module.exports = { get, list, create, update, remove };

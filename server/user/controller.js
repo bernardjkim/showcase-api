@@ -4,26 +4,32 @@ const { checkError, docToMsg, msgToDoc } = require('../../util/mq');
 const EXCHANGE = 'api';
 
 /**
- * Load user and append to req
+ *
  */
-async function load(req, res, next, id) {
-  const query = { _id: id };
-  mqClient
-    .publish(docToMsg(query), EXCHANGE, 'db.req.user.get')
-    .then(msgToDoc)
-    .then(checkError)
-    .then(doc => (req.user = doc.user))
-    .then(() => next())
-    .catch(next);
+function current(req, res, next) {
+  if (!req.user) return next();
+
+  req.url = `/${req.user['_id']}`;
+  req.originalUrl = `${req.baseUrl}${req.url}`;
+  next();
 }
 
 /**
- * Get user
+ * Get a single user
  * @property  {User}  req.user  - User object
  * @returns   {User}
  */
-function get(req, res) {
-  return res.json({ user: req.user });
+function get(req, res, next) {
+  const query = { _id: req.params.user };
+  mqClient.publish(docToMsg(query), EXCHANGE, 'db.req.user.get').catch(next);
+}
+
+/**
+ * Get a list of users
+ */
+function list(req, res, next) {
+  const query = { _id: req.params.user };
+  mqClient.publish(docToMsg(query), EXCHANGE, 'db.req.user.list').catch(next);
 }
 
 /**
@@ -40,33 +46,18 @@ async function create(req, res, next) {
     password: req.body.password,
   };
 
-  mqClient
-    .publish(docToMsg(user), EXCHANGE, 'db.req.user.create')
-    .then(msgToDoc)
-    .then(checkError)
-    .then(doc => res.status(httpStatus.CREATED).json({ user: doc.user }))
-    .catch(next);
+  mqClient.publish(docToMsg(user), EXCHANGE, 'db.req.user.create').catch(next);
 }
 
 async function update(req, res, next) {
   const query = {};
   const user = {};
-  mqClient
-    .publish(docToMsg({ query, user }), EXCHANGE, 'db.req.user.update')
-    .then(msgToDoc)
-    .then(checkError)
-    .then(doc => res.json({ user: doc.user }))
-    .catch(next);
+  mqClient.publish(docToMsg({ query, user }), EXCHANGE, 'db.req.user.update').catch(next);
 }
 
 async function remove(req, res, next) {
   const query = {};
-  mqClient
-    .publish(docToMsg(query), EXCHANGE, 'db.req.user.delete')
-    .then(msgToDoc)
-    .then(checkError)
-    .then(doc => res.json({ user: doc.user }))
-    .catch(next);
+  mqClient.publish(docToMsg(query), EXCHANGE, 'db.req.user.delete').catch(next);
 }
 
-module.exports = { load, get, create, update, remove };
+module.exports = { current, get, list, create, update, remove };
