@@ -1,16 +1,15 @@
 const httpStatus = require('http-status');
-const mqClient = require('../../system/amqp');
-const { checkError, docToMsg, msgToDoc } = require('../../util/mq');
-const EXCHANGE = 'api';
+const { exchange } = require('../amqp');
+const { checkError } = require('../../util/mq');
 
 /**
  * Load specified like
  */
 async function load(req, res, next, id) {
   const query = { _id: id };
-  mqClient
-    .publish(docToMsg(query), EXCHANGE, 'db.req.like.get')
-    .then(msgToDoc)
+  exchange
+    .rpc(query, 'req.like.get')
+    .then(msg => msg.getContent())
     .then(checkError)
     .then(content => (req.like = content.doc))
     .then(() => next())
@@ -32,9 +31,9 @@ function get(req, res) {
 function list(req, res, next) {
   const { article, user } = req.query;
   const query = { article, user };
-  mqClient
-    .publish(docToMsg(query), EXCHANGE, 'db.req.like.list')
-    .then(msgToDoc)
+  exchange
+    .rpc(query, 'req.like.list')
+    .then(msg => msg.getContent())
     .then(checkError)
     .then(content => res.json({ likes: content.docs }))
     .catch(next);
@@ -50,9 +49,9 @@ async function create(req, res, next) {
     article: req.body.articleId,
     user: req.user['_id'],
   };
-  mqClient
-    .publish(docToMsg(like), EXCHANGE, 'db.req.like.create')
-    .then(msgToDoc)
+  exchange
+    .rpc(like, 'req.like.create')
+    .then(msg => msg.getContent())
     .then(checkError)
     .then(content => res.status(httpStatus.CREATED).json({ like: content.doc }))
     .catch(next);

@@ -2,7 +2,7 @@ const winston = require('winston');
 const DailyRotateFile = require('winston-daily-rotate-file');
 
 const customFormat = winston.format.printf(
-  i => `${i.level.toUpperCase()}: ${i.timestamp} ${i.message}`,
+  i => `${i.level.toUpperCase()}: ${i.timestamp} ${i.message} ${i.meta.message}`,
 );
 
 // Log unhandled exceptions to separate file
@@ -21,9 +21,7 @@ const infoAndWarnFilter = winston.format(info =>
   info.level === 'info' || info.level === 'warn' ? info : false,
 );
 
-const errorFilter = winston.format(info =>
-  info.level === 'error' ? info : false,
-);
+const errorFilter = winston.format(info => (info.level === 'error' ? info : false));
 
 // Separate warn/error
 const transports = [
@@ -39,9 +37,9 @@ const transports = [
     colorize: false,
     format: winston.format.combine(
       errorFilter(),
-      winston.format.timestamp(),
-      winston.format.prettyPrint(),
-      // customFormat,
+      // winston.format.timestamp(),
+      // winston.format.prettyPrint(),
+      customFormat,
     ),
   }),
   new DailyRotateFile({
@@ -54,11 +52,7 @@ const transports = [
     json: true,
     colorize: false,
     level: 'info',
-    format: winston.format.combine(
-      infoAndWarnFilter(),
-      winston.format.timestamp(),
-      customFormat,
-    ),
+    format: winston.format.combine(infoAndWarnFilter(), winston.format.timestamp(), customFormat),
   }),
   // new winston.transports.Console({
   //   level: 'warn', // log warn level to console only

@@ -1,9 +1,8 @@
 const httpStatus = require('http-status');
 const APIError = require('../error/APIError');
 const { sign, decode } = require('../../util/jwt');
-const mqClient = require('../../system/amqp');
-const { checkError, docToMsg, msgToDoc } = require('../../util/mq');
-const EXCHANGE = 'api';
+const { exchange } = require('../amqp');
+const { checkError } = require('../../util/mq');
 
 /**
  * Returns jwt token if valid email and password is provided
@@ -20,9 +19,9 @@ async function create(req, res, next) {
   };
 
   const auth = { email, password };
-  mqClient
-    .publish(docToMsg(auth), EXCHANGE, 'db.req.auth.create')
-    .then(msgToDoc)
+  exchange
+    .rpc(auth, 'req.auth.create')
+    .then(msg => msg.getContent())
     .then(checkError)
     .then(content => sign({ user: content.doc }))
     .then(token => res.cookie('jwt', token, options))
