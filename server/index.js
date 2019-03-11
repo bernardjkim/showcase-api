@@ -12,8 +12,6 @@ router.get('/health-check', (req, res) => {
   res.send('OK');
 });
 
-// mount article routes at /article
-
 router.use('/article', articleRoutes);
 router.use('/like', likeRoutes);
 router.use('/comment', commentRoutes);

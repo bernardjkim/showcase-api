@@ -1,22 +1,13 @@
-const amqp = require('./AMQPClient');
-const AMQP_URL = 'amqp://rabbitmq:5672';
-
-let mqClient = null;
-
-async function init() {
-  mqClient = new amqp(AMQP_URL);
-
-  mqClient
-    .initialize()
-    .then(() => [
-      mqClient.bindExchange('api', 'db', 'db.res.#.#'),
-      mqClient.createWorker('db.res', 'api', 'db.res.#.#'),
-    ])
-    .then(promises => Promise.all(promises))
-    .then(() => Object.freeze(mqClient))
-    .catch(err => console.error(`[AMQP] ${err.message}`));
-}
-
-init();
-
-module.exports = mqClient;
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+var Connection_1 = require("./Connection");
+exports.Connection = Connection_1.Connection;
+var Exchange_1 = require("./Exchange");
+exports.Exchange = Exchange_1.Exchange;
+var Queue_1 = require("./Queue");
+exports.Queue = Queue_1.Queue;
+var Binding_1 = require("./Binding");
+exports.Binding = Binding_1.Binding;
+var Message_1 = require("./Message");
+exports.Message = Message_1.Message;
+//# sourceMappingURL=index.js.map

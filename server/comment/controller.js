@@ -1,18 +1,17 @@
 const httpStatus = require('http-status');
-const mqClient = require('../../system/amqp');
-const { checkError, docToMsg, msgToDoc } = require('../../util/mq');
-const EXCHANGE = 'api';
+const { exchange } = require('../amqp');
+const { checkError } = require('../../util/mq');
 
 /**
  * Load comments and append to req
  */
 async function load(req, res, next, id) {
-  const query = { article: id };
-  mqClient
-    .publish(docToMsg(query), EXCHANGE, 'db.req.comment.get')
-    .then(msgToDoc)
+  const query = { _id: id };
+  exchange
+    .rpc(query, 'req.comment.get')
+    .then(msg => msg.getContent())
     .then(checkError)
-    .then(doc => (req.comments = doc.comments))
+    .then(content => (req.comment = content.doc))
     .then(() => next())
     .catch(next);
 }
@@ -24,6 +23,20 @@ async function load(req, res, next, id) {
  */
 function get(req, res) {
   return res.json({ comments: req.comments });
+}
+
+/**
+ * TODO
+ */
+function list(req, res, next) {
+  const { article, user } = req.query;
+  const query = { article, user };
+  exchange
+    .rpc(query, 'req.comment.list')
+    .then(msg => msg.getContent())
+    .then(checkError)
+    .then(content => res.json({ comments: content.docs }))
+    .catch(next);
 }
 
 /**
@@ -40,12 +53,22 @@ async function create(req, res, next) {
     value: req.body.value,
   };
 
-  mqClient
-    .publish(docToMsg(comment), EXCHANGE, 'db.req.comment.create')
-    .then(msgToDoc)
+  exchange
+    .rpc(comment, 'req.comment.create')
+    .then(msg => msg.getContent())
     .then(checkError)
-    .then(doc => res.status(httpStatus.CREATED).json({ comment: doc.comment }))
+    .then(content => res.status(httpStatus.CREATED).json({ comment: content.doc }))
     .catch(next);
 }
 
-module.exports = { get, create, load };
+/**
+ * TODO
+ */
+function update() {}
+
+/**
+ * TODO
+ */
+function remove() {}
+
+module.exports = { get, list, create, load, update, remove };

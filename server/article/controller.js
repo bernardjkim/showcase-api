@@ -2,20 +2,19 @@ const qs = require('qs');
 const httpStatus = require('http-status');
 const { queryTerm, queryAll } = require('../../util/elasticsearch');
 const { uploadFile } = require('../../util/s3');
-const mqClient = require('../../system/amqp');
-const { checkError, docToMsg, msgToDoc } = require('../../util/mq');
-const EXCHANGE = 'api';
+const { exchange } = require('../amqp');
+const { checkError } = require('../../util/mq');
 
 /**
  * Load article and append to req
  */
 async function load(req, res, next, id) {
   const query = { _id: id };
-  mqClient
-    .publish(docToMsg(query), EXCHANGE, 'db.req.article.get')
-    .then(msgToDoc)
+  exchange
+    .rpc(query, 'req.article.get')
+    .then(msg => msg.getContent())
     .then(checkError)
-    .then(doc => (req.article = doc.articles[0]))
+    .then(content => (req.article = content.doc))
     .then(() => next())
     .catch(next);
 }
@@ -63,9 +62,9 @@ async function create(req, res, next) {
     image: await imageLocation,
   };
 
-  mqClient
-    .publish(docToMsg(article), EXCHANGE, 'db.req.article.create')
-    .then(msgToDoc)
+  exchange
+    .rpc(article, 'req.article.create')
+    .then(msg => msg.getContent())
     .then(checkError)
     .then(doc => res.status(httpStatus.CREATED).json({ article: doc.article }))
     .catch(next);

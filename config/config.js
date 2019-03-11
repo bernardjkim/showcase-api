@@ -30,6 +30,12 @@ const envVarsSchema = Joi.object({
   ES_PORT: Joi.number()
     .required()
     .description('ES_PORT required'),
+  RABBIT_HOST: Joi.string()
+    .required()
+    .description('RABBIT_HOST required'),
+  RABBIT_PORT: Joi.number()
+    .required()
+    .description('RABBIT_PORT required'),
 })
   .unknown()
   .required();
@@ -50,6 +56,10 @@ Joi.validate(process.env, envVarsSchema, (err, value) => {
     es: {
       host: value.ES_HOST,
       port: value.ES_PORT,
+    },
+    rabbit: {
+      host: value.RABBIT_HOST,
+      port: value.RABBIT_PORT,
     },
   };
   module.exports = config;
