@@ -1,6 +1,7 @@
 const httpStatus = require('http-status');
 const { exchange } = require('../amqp');
 const { checkError } = require('../../util/mq');
+const DB_REQ = 'db.req';
 
 /**
  * Load user and append to req
@@ -8,7 +9,7 @@ const { checkError } = require('../../util/mq');
 async function load(req, res, next, id) {
   const query = { _id: id };
   exchange
-    .rpc(query, 'req.user.get')
+    .rpc(query, `${DB_REQ}.user.get`)
     .then(msg => msg.getContent())
     .then(checkError)
     .then(content => (req.user = content.doc))
@@ -45,7 +46,7 @@ async function create(req, res, next) {
   };
 
   exchange
-    .rpc(user, 'req.user.create')
+    .rpc(user, `${DB_REQ}.user.create`)
     .then(msg => msg.getContent())
     .then(checkError)
     .then(content => res.status(httpStatus.CREATED).json({ user: content.doc }))

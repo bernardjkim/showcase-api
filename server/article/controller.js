@@ -1,9 +1,10 @@
 const qs = require('qs');
 const httpStatus = require('http-status');
-const { queryTerm, queryAll } = require('../../util/elasticsearch');
 const { uploadFile } = require('../../util/s3');
 const { exchange } = require('../amqp');
 const { checkError } = require('../../util/mq');
+const DB_REQ = 'db.req';
+const ES_REQ = 'es.req';
 
 /**
  * Load article and append to req
@@ -11,7 +12,7 @@ const { checkError } = require('../../util/mq');
 async function load(req, res, next, id) {
   const query = { _id: id };
   exchange
-    .rpc(query, 'req.article.get')
+    .rpc(query, `${DB_REQ}.article.get`)
     .then(msg => msg.getContent())
     .then(checkError)
     .then(content => (req.article = content.doc))
@@ -63,7 +64,7 @@ async function create(req, res, next) {
   };
 
   exchange
-    .rpc(article, 'req.article.create')
+    .rpc(article, `${DB_REQ}.article.create`)
     .then(msg => msg.getContent())
     .then(checkError)
     .then(doc => res.status(httpStatus.CREATED).json({ article: doc.article }))
@@ -78,8 +79,12 @@ async function create(req, res, next) {
  */
 async function search(req, res, next) {
   const { q, offset } = req.query;
-  const results = await queryTerm(q, offset).catch(e => next(e));
-  res.json(results);
+  exchange
+    .rpc({ term: q, offset }, `${ES_REQ}.article.search`)
+    .then(msg => msg.getContent())
+    .then(checkError)
+    .then(result => res.json(result.docs))
+    .catch(next);
 }
 
 /**
@@ -88,9 +93,13 @@ async function search(req, res, next) {
  * @returns {object}                    - ES search result
  */
 async function all(req, res, next) {
-  const { offset } = req.query;
-  const results = await queryAll(offset).catch(e => next(e));
-  res.json(results);
+  const { term, offset } = req.query;
+  exchange
+    .rpc({ term, offset }, `${ES_REQ}.article.search`)
+    .then(msg => msg.getContent())
+    .then(checkError)
+    .then(result => res.json(result.docs))
+    .catch(next);
 }
 
 module.exports = { load, get, create, parse, search, all };

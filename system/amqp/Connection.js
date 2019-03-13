@@ -41,62 +41,6 @@ class Connection {
     //  Public
     // ===========================================================================
     /**
-     * Close connection to message broker service.
-     * @returns Promise that fulfills after connection is closed
-     */
-    close() {
-        return __awaiter(this, void 0, void 0, function* () {
-            this._isClosing = true;
-            return this.initialized.then(() => this._connection.close());
-        });
-    }
-    /**
-     * Make sure the whole defined connection topology is configured:
-     * @returns Promise that fulfills after all defined exchanges, queues and bindings are initialized
-     */
-    completeConfiguration() {
-        const promises = [];
-        for (const exchangeId of Object.keys(this._exchanges)) {
-            const exchange = this._exchanges[exchangeId];
-            promises.push(exchange.initialized);
-        }
-        for (const queueId of Object.keys(this._queues)) {
-            const queue = this._queues[queueId];
-            promises.push(queue.initialized);
-            if (queue._consumerInitialized) {
-                promises.push(queue._consumerInitialized);
-            }
-        }
-        for (const bindingId of Object.keys(this._bindings)) {
-            const binding = this._bindings[bindingId];
-            promises.push(binding.initialized);
-        }
-        return Promise.all(promises);
-    }
-    /**
-     * Delete the whole defined connection topology:
-     * @returns Promise that fulfills after all defined exchanges, queues and bindings have been removed
-     */
-    deleteConfiguration() {
-        const promises = [];
-        for (const bindingId of Object.keys(this._bindings)) {
-            const binding = this._bindings[bindingId];
-            promises.push(binding.delete());
-        }
-        for (const queueId of Object.keys(this._queues)) {
-            const queue = this._queues[queueId];
-            if (queue._consumerInitialized) {
-                promises.push(queue.stopConsumer());
-            }
-            promises.push(queue.delete());
-        }
-        for (const exchangeId of Object.keys(this._exchanges)) {
-            const exchange = this._exchanges[exchangeId];
-            promises.push(exchange.delete());
-        }
-        return Promise.all(promises);
-    }
-    /**
      * Create an exchange with the specified fields & options.
      * @param name    - Exchange name
      * @param type    - Exchange type
@@ -159,6 +103,62 @@ class Connection {
             }
         }
         return Promise.all(promises);
+    }
+    /**
+     * Make sure the whole defined connection topology is configured:
+     * @returns Promise that fulfills after all defined exchanges, queues and bindings are initialized
+     */
+    completeConfiguration() {
+        const promises = [];
+        for (const exchangeId of Object.keys(this._exchanges)) {
+            const exchange = this._exchanges[exchangeId];
+            promises.push(exchange.initialized);
+        }
+        for (const queueId of Object.keys(this._queues)) {
+            const queue = this._queues[queueId];
+            promises.push(queue.initialized);
+            if (queue._consumerInitialized) {
+                promises.push(queue._consumerInitialized);
+            }
+        }
+        for (const bindingId of Object.keys(this._bindings)) {
+            const binding = this._bindings[bindingId];
+            promises.push(binding.initialized);
+        }
+        return Promise.all(promises);
+    }
+    /**
+     * Delete the whole defined connection topology:
+     * @returns Promise that fulfills after all defined exchanges, queues and bindings have been removed
+     */
+    deleteConfiguration() {
+        const promises = [];
+        for (const bindingId of Object.keys(this._bindings)) {
+            const binding = this._bindings[bindingId];
+            promises.push(binding.delete());
+        }
+        for (const queueId of Object.keys(this._queues)) {
+            const queue = this._queues[queueId];
+            if (queue._consumerInitialized) {
+                promises.push(queue.stopConsumer());
+            }
+            promises.push(queue.delete());
+        }
+        for (const exchangeId of Object.keys(this._exchanges)) {
+            const exchange = this._exchanges[exchangeId];
+            promises.push(exchange.delete());
+        }
+        return Promise.all(promises);
+    }
+    /**
+     * Close connection to message broker service.
+     * @returns Promise that fulfills after connection is closed
+     */
+    close() {
+        return __awaiter(this, void 0, void 0, function* () {
+            this._isClosing = true;
+            return this.initialized.then(() => this._connection.close());
+        });
     }
     /**
      * Rebuild connection topology.

@@ -1,6 +1,7 @@
 const httpStatus = require('http-status');
 const { exchange } = require('../amqp');
 const { checkError } = require('../../util/mq');
+const DB_REQ = 'db.req';
 
 /**
  * Load specified like
@@ -8,7 +9,7 @@ const { checkError } = require('../../util/mq');
 async function load(req, res, next, id) {
   const query = { _id: id };
   exchange
-    .rpc(query, 'req.like.get')
+    .rpc(query, `${DB_REQ}.like.get`)
     .then(msg => msg.getContent())
     .then(checkError)
     .then(content => (req.like = content.doc))
@@ -32,7 +33,7 @@ function list(req, res, next) {
   const { article, user } = req.query;
   const query = { article, user };
   exchange
-    .rpc(query, 'req.like.list')
+    .rpc(query, `${DB_REQ}.like.list`)
     .then(msg => msg.getContent())
     .then(checkError)
     .then(content => res.json({ likes: content.docs }))
@@ -50,7 +51,7 @@ async function create(req, res, next) {
     user: req.user['_id'],
   };
   exchange
-    .rpc(like, 'req.like.create')
+    .rpc(like, `${DB_REQ}.like.create`)
     .then(msg => msg.getContent())
     .then(checkError)
     .then(content => res.status(httpStatus.CREATED).json({ like: content.doc }))

@@ -3,6 +3,7 @@ const APIError = require('../error/APIError');
 const { sign, decode } = require('../../util/jwt');
 const { exchange } = require('../amqp');
 const { checkError } = require('../../util/mq');
+const DB_REQ = 'db.req';
 
 /**
  * Returns jwt token if valid email and password is provided
@@ -20,7 +21,7 @@ async function create(req, res, next) {
 
   const auth = { email, password };
   exchange
-    .rpc(auth, 'req.auth.create')
+    .rpc(auth, `${DB_REQ}.auth.create`)
     .then(msg => msg.getContent())
     .then(checkError)
     .then(content => sign({ user: content.doc }))

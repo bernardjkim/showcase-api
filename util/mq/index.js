@@ -11,20 +11,4 @@ function checkError(doc) {
   else return doc;
 }
 
-/**
- * Convert the msg buffer into a JSON document
- * @param {Buffer} msg - Response msg recieved
- */
-function msgToDoc(msg) {
-  return JSON.parse(msg.toString());
-}
-
-/**
- * Convert the JSON document into a msg buffer
- * @param {object} doc - JSON document
- */
-function docToMsg(doc) {
-  return Buffer.from(JSON.stringify(doc));
-}
-
-module.exports = { checkError, msgToDoc, docToMsg };
+module.exports = { checkError };

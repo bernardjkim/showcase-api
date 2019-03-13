@@ -1,6 +1,7 @@
 const httpStatus = require('http-status');
 const { exchange } = require('../amqp');
 const { checkError } = require('../../util/mq');
+const DB_REQ = 'db.req';
 
 /**
  * Load comments and append to req
@@ -8,7 +9,7 @@ const { checkError } = require('../../util/mq');
 async function load(req, res, next, id) {
   const query = { _id: id };
   exchange
-    .rpc(query, 'req.comment.get')
+    .rpc(query, `${DB_REQ}.comment.get`)
     .then(msg => msg.getContent())
     .then(checkError)
     .then(content => (req.comment = content.doc))
@@ -32,7 +33,7 @@ function list(req, res, next) {
   const { article, user } = req.query;
   const query = { article, user };
   exchange
-    .rpc(query, 'req.comment.list')
+    .rpc(query, `${DB_REQ}.comment.list`)
     .then(msg => msg.getContent())
     .then(checkError)
     .then(content => res.json({ comments: content.docs }))
@@ -54,7 +55,7 @@ async function create(req, res, next) {
   };
 
   exchange
-    .rpc(comment, 'req.comment.create')
+    .rpc(comment, `${DB_REQ}.comment.create`)
     .then(msg => msg.getContent())
     .then(checkError)
     .then(content => res.status(httpStatus.CREATED).json({ comment: content.doc }))

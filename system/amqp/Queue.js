@@ -209,8 +209,6 @@ class Queue extends AbstractNode_1.AbstractNode {
      * @param correlationId - Request message correlationId
      */
     replyToQueue(response, replyTo, correlationId) {
-        /* tslint:disable */
-        console.log(response);
         if (!(response instanceof Message_1.Message)) {
             response = new Message_1.Message(response);
         }
