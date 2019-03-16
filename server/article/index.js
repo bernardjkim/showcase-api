@@ -1,6 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const paramValidation = require('../../config/param-validation');
+const cacheMiddleware = require('../cache');
 const article = require('./controller');
 const auth = require('../auth/controller');
 const { validate } = require('../joi');

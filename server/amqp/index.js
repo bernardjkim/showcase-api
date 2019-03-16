@@ -1,4 +1,4 @@
-const amqp = require('../../system/amqp');
+const amqp = require('@bernardjkim/amqplib');
 const config = require('../../config/config');
 
 const { host, port } = config.rabbit;

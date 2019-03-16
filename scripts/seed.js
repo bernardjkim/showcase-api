@@ -1,61 +1,38 @@
-// const fs = require('fs');
-// const mongoose = require('mongoose');
+const fs = require('fs');
+const { exchange } = require('../server/amqp');
+const articles = require('../seed/articles.json');
 
-// const config = require('../config/config');
-// const { uploadFile } = require('../util/s3');
+function insert(article) {
+  return new Promise((resolve, reject) => {
+    const { image, ...form } = article;
 
-// const Article = require('../server/article/article.model');
-// const articles = require('../seed/articles.json');
+    // read local image
+    fs.readFile(`images/${image}`, (err, data) => {
+      if (err) throw err;
 
-// // connect to mongo db
-// const { host, port, db } = config.mongo;
-// const mongoUri = `mongodb://${host}:${port}/${db}`;
-// const mongoOptions = { useNewUrlParser: true, useCreateIndex: true };
-// mongoose.connect(mongoUri, mongoOptions);
-// mongoose.connection.on('error', () => {
-//   throw new Error(`unable to connect to database: ${mongoUri}`);
-// });
+      // creat buffer from data
+      var base64data = new Buffer.from(data, 'binary');
+      const file = { buffer: base64data, mimetype: 'image/png' };
 
-// function insert(article) {
-//   return new Promise(resolve => {
-//     // read local image
-//     fs.readFile(`images/${article.image}`, function(err, data) {
-//       if (err) throw err;
+      // create new article
+      exchange
+        .rpc({ form, file }, `db.req.article.create`)
+        .then(msg => msg.getContent())
+        .then(content => {
+          console.log(`Insert ${JSON.stringify(content)}`);
+          resolve();
+        })
+        .catch(reject);
+    });
+  });
+}
 
-//       // create buffer from data
-//       var base64data = new Buffer.from(data, 'binary');
-
-//       // upload file to s3
-//       uploadFile(base64data, `testing/${article.image}`, 'image/png')
-//         .then(data => {
-//           // replace article image local path to s3 key
-//           article.image = data.Location;
-
-//           // save article into database
-//           const mongoArticle = new Article(article);
-//           mongoArticle
-//             .save()
-//             .then(savedArticle => {
-//               console.log('saved: ', savedArticle); // eslint-disable-line no-console
-//               resolve();
-//             })
-//             .catch(e => {
-//               throw e;
-//             });
-//         })
-//         .catch(e => {
-//           throw e;
-//         });
-//     });
-//   });
-// }
-
-// // insert articles into database
-// Promise.all(articles.map(article => insert(article)))
-//   .then(() => {
-//     process.exit();
-//   })
-//   .catch(e => {
-//     console.error(e); // eslint-disable-line no-console
-//     process.exit(1);
-//   });
+// insert articles into database
+Promise.all(articles.map(article => insert(article)))
+  .then(() => {
+    process.exit();
+  })
+  .catch(e => {
+    console.error(e); // eslint-disable-line no-console
+    process.exit(1);
+  });

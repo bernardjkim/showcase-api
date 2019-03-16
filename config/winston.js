@@ -2,6 +2,10 @@ const winston = require('winston');
 const DailyRotateFile = require('winston-daily-rotate-file');
 
 const customFormat = winston.format.printf(
+  i => `${i.level.toUpperCase()}: ${i.timestamp} ${i.message} `,
+);
+
+const customFormatApp = winston.format.printf(
   i => `${i.level.toUpperCase()}: ${i.timestamp} ${i.message} ${i.meta.message}`,
 );
 
@@ -39,7 +43,7 @@ const transports = [
       errorFilter(),
       // winston.format.timestamp(),
       // winston.format.prettyPrint(),
-      customFormat,
+      customFormatApp,
     ),
   }),
   new DailyRotateFile({

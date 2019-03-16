@@ -1,6 +1,5 @@
 const qs = require('qs');
 const httpStatus = require('http-status');
-const { uploadFile } = require('../../util/s3');
 const { exchange } = require('../amqp');
 const { checkError } = require('../../util/mq');
 const DB_REQ = 'db.req';
@@ -48,26 +47,16 @@ function get(req, res) {
 async function create(req, res, next) {
   const { file, form } = req;
 
-  // upload screenshot to S3
-  const imageLocation = new Promise(resolve => {
-    const timestamp = Date.now().toString();
-    uploadFile(file.buffer, `screenshots/${timestamp}-lg.png`, file.mimetype)
-      .then(data => {
-        resolve(data.Location);
-      })
-      .catch(e => next(e));
-  });
-
   const article = {
-    ...form,
-    image: await imageLocation,
+    form,
+    file,
   };
-
+  // create new article
   exchange
     .rpc(article, `${DB_REQ}.article.create`)
     .then(msg => msg.getContent())
     .then(checkError)
-    .then(doc => res.status(httpStatus.CREATED).json({ article: doc.article }))
+    .then(content => res.status(httpStatus.CREATED).json(content.doc))
     .catch(next);
 }
 
@@ -80,7 +69,8 @@ async function create(req, res, next) {
 async function search(req, res, next) {
   const { q, offset } = req.query;
   exchange
-    .rpc({ term: q, offset }, `${ES_REQ}.article.search`)
+    // .rpc({ term: q, offset }, `${ES_REQ}.article.search`)
+    .rpc({ term: q, offset }, `cache.req.article.search`)
     .then(msg => msg.getContent())
     .then(checkError)
     .then(result => res.json(result.docs))
@@ -95,7 +85,8 @@ async function search(req, res, next) {
 async function all(req, res, next) {
   const { term, offset } = req.query;
   exchange
-    .rpc({ term, offset }, `${ES_REQ}.article.search`)
+    // .rpc({ term, offset }, `${ES_REQ}.article.search`)
+    .rpc({ term, offset }, `cache.req.article.search`)
     .then(msg => msg.getContent())
     .then(checkError)
     .then(result => res.json(result.docs))
