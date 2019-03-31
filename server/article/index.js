@@ -41,6 +41,12 @@ router
   /** GET /api/article/:id - Get article */
   .get(article.get);
 
+// =============================================================================
+router.route('/cache/all').get(cacheMiddleware(10), article.all);
+router.route('/cache/search').get(cacheMiddleware(10), article.search);
+router.route('/cache/:article').get(cacheMiddleware(10), article.get);
+// =============================================================================
+
 /** Load article when API with id route parameter is hit */
 router.param('article', article.load);
 

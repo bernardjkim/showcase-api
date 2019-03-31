@@ -69,8 +69,8 @@ async function create(req, res, next) {
 async function search(req, res, next) {
   const { q, offset } = req.query;
   exchange
-    // .rpc({ term: q, offset }, `${ES_REQ}.article.search`)
-    .rpc({ term: q, offset }, `cache.req.article.search`)
+    .rpc({ term: q, offset }, `${ES_REQ}.article.search`)
+    // .rpc({ term: q, offset }, `cache.req.article.search`)
     .then(msg => msg.getContent())
     .then(checkError)
     .then(result => res.json(result.docs))
@@ -85,8 +85,8 @@ async function search(req, res, next) {
 async function all(req, res, next) {
   const { term, offset } = req.query;
   exchange
-    // .rpc({ term, offset }, `${ES_REQ}.article.search`)
-    .rpc({ term, offset }, `cache.req.article.search`)
+    .rpc({ term, offset }, `${ES_REQ}.article.search`)
+    // .rpc({ term, offset }, `cache.req.article.search`)
     .then(msg => msg.getContent())
     .then(checkError)
     .then(result => res.json(result.docs))
