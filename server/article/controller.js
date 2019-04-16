@@ -62,14 +62,15 @@ async function create(req, res, next) {
 
 /**
  * Search articles with the given query
- * @param   {string}  req.query.q       - Query string
+ * @param   {string}  req.query.term    - Query string
  * @param   {number}  req.query.offset  - Query offset
+ * @param   {string}  req.query.sort    - Query offset
  * @returns {object}                    -  ES search result
  */
 async function search(req, res, next) {
-  const { q, offset } = req.query;
+  const { term, offset,sort } = req.query;
   exchange
-    .rpc({ term: q, offset }, `${ES_REQ}.article.search`)
+    .rpc({ term, offset, sort }, `${ES_REQ}.article.search`)
     // .rpc({ term: q, offset }, `cache.req.article.search`)
     .then(msg => msg.getContent())
     .then(checkError)
@@ -80,6 +81,7 @@ async function search(req, res, next) {
 /**
  * Get all articles
  * @param   {number}  req.query.offset  - Articles offset
+ * @param   {string}  req.query.sort    - Query offset
  * @returns {object}                    - ES search result
  */
 async function all(req, res, next) {
