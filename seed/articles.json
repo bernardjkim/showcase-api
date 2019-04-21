@@ -5,7 +5,7 @@
     "github": "",
     "description": "E-Commerce",
     "image": "amazon.png",
-    "tags": ["e-commerce"]
+    "tags": ["e-commerce", "demo"]
   },
   {
     "title": "docker",
@@ -13,7 +13,7 @@
     "github": "",
     "description": "We can help drive your business into the global digital economy by providing the only container platform to provide the choice, agility and security needed to usher in the new era of application computing",
     "image": "docker.png",
-    "tags": ["container", "blue"]
+    "tags": ["container", "blue", "demo"]
   },
   {
     "title": "equinor",
@@ -21,7 +21,7 @@
     "github": "",
     "description": "Coding is fun!",
     "image": "equinor.png",
-    "tags": ["code", "game", "red", "pink"]
+    "tags": ["code", "game", "red", "pink", "demo"]
   },
   {
     "title": "facebook",
@@ -29,7 +29,7 @@
     "github": "",
     "description": "Social Media Platform",
     "image": "facebook.png",
-    "tags": ["social media"]
+    "tags": ["social media", "demo"]
   },
   {
     "title": "github",
@@ -37,7 +37,7 @@
     "github": "",
     "description": "GitHub is a development platform inspired by the way you work. From open source to business, you can host and review code, manage projects, and build software alongside 31 million developers.",
     "image": "github.png",
-    "tags": ["git", "code", "open source"]
+    "tags": ["git", "code", "open source", "demo"]
   },
   {
     "title": "google",
@@ -45,7 +45,7 @@
     "github": "",
     "description": "Search Engine",
     "image": "google.png",
-    "tags": ["google", "search"]
+    "tags": ["google", "search", "demo"]
   },
   {
     "title": "heroku",
@@ -53,7 +53,7 @@
     "github": "",
     "description": "Developers, teams, and businesses of all sizes use Heroku to deploy, manage, and scale apps. Whether you're building a simple prototype or a business-critical product, Heroku's fully-managed platform gives you the simplest path to delivering apps quickly. Learn more about how Heroku can benefit your app development.",
     "image": "heroku.png",
-    "tags": ["code", "cloud application platform"]
+    "tags": ["code", "cloud application platform", "demo"]
   },
   {
     "title": "leetcode",
@@ -61,7 +61,7 @@
     "github": "",
     "description": "LeetCode is the best platform to help you enhance your skills, expand your knowledge and prepare for technical interviews.",
     "image": "leetcode.png",
-    "tags": ["code"]
+    "tags": ["code", "demo"]
   },
   {
     "title": "medium",
@@ -69,7 +69,7 @@
     "github": "",
     "description": "Welcome to Medium, where words matter. We’ll deliver the best stories and ideas on the topics you care about most straight to your homepage, app, or inbox.",
     "image": "medium.png",
-    "tags": ["blog"]
+    "tags": ["blog", "demo"]
   },
   {
     "title": "netflix",
@@ -77,7 +77,7 @@
     "github": "",
     "description": "Watch Netflix movies & TV shows online or stream right to your smart TV, game console, PC, Mac, mobile, tablet and more.",
     "image": "netflix.png",
-    "tags": ["movies", "TV", "streaming"]
+    "tags": ["movies", "TV", "streaming", "demo"]
   },
   {
     "title": "npm",
@@ -85,7 +85,7 @@
     "github": "",
     "description": "npm is the package manager for JavaScript and the world’s largest software registry. Discover packages of reusable code — and assemble them in powerful new ways.",
     "image": "npm.png",
-    "tags": ["code", "node", "npm", "package mangager"]
+    "tags": ["code", "node", "npm", "package mangager", "demo"]
   },
   {
     "title": "reddit",
@@ -93,7 +93,7 @@
     "github": "",
     "description": "Reddit gives you the best of the internet in one place. Get a constantly updating feed of breaking news, fun stories, pics, memes, and videos just for you.",
     "image": "reddit.png",
-    "tags": ["social media", "news"]
+    "tags": ["social media", "news", "demo"]
   },
   {
     "title": "stackoverflow",
@@ -101,7 +101,7 @@
     "github": "",
     "description": "Founded in 2008, Stack Overflow is the largest, most trusted online community for developers to learn, share their knowledge, and build their careers. More than 50 million professional and aspiring programmers visit Stack Overflow each month to help solve coding problems, develop new skills, and find job opportunities. Stack Overflow partners with businesses to help them understand, hire, engage, and enable the world's developers. Our products and services are focused on developer marketing, technical recruiting, market research, and enterprise knowledge sharing. Learn more about our business solutions here. ",
     "image": "stackoverflow.png",
-    "tags": ["code"]
+    "tags": ["code", "demo"]
   },
   {
     "title": "youtube",
@@ -109,6 +109,6 @@
     "github": "",
     "description": "Enjoy the videos and music you love, upload original content, and share it all with friends, family, and the world on YouTube.",
     "image": "youtube.png",
-    "tags": ["social media", "video"]
+    "tags": ["social media", "video", "demo"]
   }
 ]

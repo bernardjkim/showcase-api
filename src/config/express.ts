@@ -1,19 +1,19 @@
 /* eslint consistent-return:0 import/order:0 */
 
-const express = require('express');
-const logger = require('morgan');
-const bodyParser = require('body-parser');
-const cookieParser = require('cookie-parser');
-const compress = require('compression');
-// const methodOverride = require('method-override');
-const cors = require('cors');
-const httpStatus = require('http-status');
-const expressWinston = require('express-winston');
-const helmet = require('helmet');
-const winstonInstance = require('./winston');
-const routes = require('../server');
-const config = require('./config');
-const APIError = require('../server/error/APIError');
+import * as bodyParser from 'body-parser';
+import * as compress from 'compression';
+import * as cookieParser from 'cookie-parser';
+// import { methodOverride } = from 'method-override';
+import * as cors from 'cors';
+import * as express from 'express';
+import * as expressWinston from 'express-winston';
+import * as helmet from 'helmet';
+import * as httpStatus from 'http-status';
+import * as logger from 'morgan';
+import { router } from '../server';
+import { APIError } from '../server/error/APIError';
+import * as config from './config';
+import { logger as winstonInstance } from './winston';
 
 const isDev = process.env.NODE_ENV !== 'production';
 const app = express();
@@ -49,16 +49,16 @@ if (isDev) {
       winstonInstance,
       meta: true, // optional: log meta data about request (defaults to true)
       msg: 'HTTP {{req.method}} {{req.url}} {{res.statusCode}} {{res.responseTime}}ms',
-      colorStatus: true, // Color the status code (default green, 3XX cyan, 4XX yellow, 5XX red).
+      // colorStatus: true, // Color the status code (default green, 3XX cyan, 4XX yellow, 5XX red).
     }),
   );
 }
 
 // mount all routes on /api path
-app.use('/api', routes);
+app.use('/api', router);
 
 // if error is not an instanceOf APIError, convert it.
-app.use((err, req, res, next) => {
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   // TODO: handle joi validation errors
   // if (err instanceof expressValidation.ValidationError) {
   //   // validation error contains errors which is an array of error each containing message[]
@@ -91,17 +91,12 @@ if (config.env !== 'test') {
 }
 
 // error handler, send stacktrace only during development
-app.use((
-  err,
-  req,
-  res,
-  next, // eslint-disable-line no-unused-vars
-) =>
+app.use((err: APIError, req: express.Request, res: express.Response, next: express.NextFunction) =>
   // eslint-disable-next-line implicit-arrow-linebreak
   res.status(err.status).json({
-    message: err.isPublic ? err.message : httpStatus[err.status],
+    message: err.isPublic ? err.message : err.status,
     stack: config.env === 'development' ? err.stack : {},
   }),
 );
 
-module.exports = app;
+export { app };

@@ -19,10 +19,7 @@ const validationOptions = {
 const validate = schema => (req, res, next) => {
   Joi.validate(req, schema, validationOptions, err => {
     if (err) {
-      const error = new APIError(
-        `Invalid request data: ${err.message}`,
-        httpStatus.BAD_REQUEST,
-      );
+      const error = new APIError(`Invalid request data: ${err.message}`, httpStatus.BAD_REQUEST);
       return next(error);
     }
     next();

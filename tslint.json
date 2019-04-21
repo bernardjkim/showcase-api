@@ -1,0 +1,13 @@
+{
+  "extends": "gts/tslint.json",
+  "rules": {
+    "max-line-length": [true, 120],
+    "ordered-imports": [
+      true,
+      {
+        "import-sources-order": "lowercase-last",
+        "named-imports-order": "lowercase-first"
+      }
+    ]
+  }
+}

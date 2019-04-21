@@ -18,4 +18,4 @@ USER node
 
 
 # Start api server
-CMD ["npm", "start"]
+CMD ["npm", "start:prod"]

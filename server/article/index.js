@@ -14,14 +14,7 @@ router
   .get(article.all)
 
   /** POST /api/article - Create new article */
-  .post(
-    auth.parse,
-    auth.authenticate,
-    multer().single('file'),
-    article.parse,
-    validate(paramValidation.createArticle),
-    article.create,
-  );
+  .post(auth.parse, auth.authenticate, multer().single('file'), article.parse, article.create);
 
 router
   .route('/all')

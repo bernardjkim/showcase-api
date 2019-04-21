@@ -1,6 +1,6 @@
-const Joi = require('joi');
+import * as Joi from 'joi';
 
-module.exports = {
+export const paramValidation = {
   // POST /api/auth
   createAuth: Joi.object({
     body: Joi.object({

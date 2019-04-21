@@ -12,7 +12,7 @@ router
   // .get( user.list)
 
   /** POST /api/user - Create new user */
-  .post(validate(paramValidation.createUser), user.create);
+  .post(user.create);
 
 router
   .route('/current')
